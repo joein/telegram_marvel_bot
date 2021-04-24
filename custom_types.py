@@ -1,4 +1,3 @@
-
 from typing import TypedDict, List, Optional
 
 
@@ -169,7 +168,7 @@ class ResultComics(TypedDict):
     format: str  # ''
     pageCount: int  # 112
     textObjects: List  # []
-    resourceURI: str  # 'httpL//gateway.marvel.com/v1/public/comics/82967
+    resourceURI: str  # 'http//gateway.marvel.com/v1/public/comics/82967
     urls: List[UrlInfo]
     series: ComicsSeries
     variants: List[ComicsVariants]
@@ -200,7 +199,6 @@ class ResponseJSON(TypedDict):
     attributionHTML: str  # <a href="http://marvel.com">Data provided by Marvel. © 2021 MARVEL</a>
     etag: str  # eb7917a0268bd1051fbe7fa5e761f9edc42b11b7
     data: Data
-
 
 
 ########################################################
