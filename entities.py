@@ -65,7 +65,7 @@ class Event:
     def __init__(
         self,
         _id,
-        title,
+        name,
         description,
         img_link,
         detail,
@@ -77,7 +77,7 @@ class Event:
         previous_event,
     ):
         self._id = _id
-        self.title = title
+        self.name = name
         self.description = description
         self.img_link = img_link
         self.detail = detail
@@ -89,7 +89,7 @@ class Event:
         self.previous_event = previous_event
 
     def __repr__(self):
-        return f"Event(_id: {self._id}, title: {self.title}, resource_uri: {self.resource_uri})"
+        return f"Event(_id: {self._id}, title: {self.name}, resource_uri: {self.resource_uri})"
 
 
 class Series:

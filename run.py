@@ -7,14 +7,14 @@ if __name__ == "__main__":
     fetcher = Fetcher(config)
     #
     # characters = fetcher.list_features(
-    #     Route.CHARACTERS, ResponseJsonParser.parse_list_characters, limit=4
+    #     Route.CHARACTERS, limit=4
     # )
     # fetcher.list_features(
-    #     Route.COMICS, ResponseJsonParser.parse_list_comics, limit=4
+    #     Route.COMICS, limit=4
     # )
     # fetcher.list_features(
-    #     Route.EVENTS, ResponseJsonParser.parse_list_events, limit=4
+    #     Route.EVENTS, limit=4
     # )
-    fetcher.list_features(
-        Route.SERIES, ResponseJsonParser.parse_list_series, limit=4
-    )
+    # fetcher.list_features(
+    #     Route.SERIES, limit=4
+    # )

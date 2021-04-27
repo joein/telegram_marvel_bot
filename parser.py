@@ -6,6 +6,11 @@ from entities import Creator, Character, Comic, Event, Series
 
 
 class ResponseJsonParser:
+
+    @staticmethod
+    def total_number(response_json):
+        return response_json["data"]["total"]
+
     @staticmethod
     def parse_list_characters(response_json) -> List[Character]:
         data: ct.Data = response_json["data"]
@@ -122,7 +127,7 @@ class ResponseJsonParser:
 
         for result in data["results"]:
             _id = result["id"]
-            title = result["title"]
+            name = result["title"]
             description = result.get("description", "")
             if not description:
                 description = result.get("variantDescription", "")
@@ -152,7 +157,7 @@ class ResponseJsonParser:
             events.append(
                 Event(
                     _id,
-                    title,
+                    name,
                     description,
                     img_link,
                     detail,

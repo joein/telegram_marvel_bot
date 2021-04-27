@@ -10,3 +10,4 @@ class Config:
         load_dotenv(DOTENV_PATH)
         self.private_key = os.getenv("MARVEL_PRIVATE_KEY")
         self.public_key = os.getenv("MARVEL_PUBLIC_KEY")
+        self.bot_token = os.getenv("BOT_TOKEN")

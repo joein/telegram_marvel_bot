@@ -7,6 +7,8 @@ import requests
 
 import custom_types as ct
 
+from parser import ResponseJsonParser
+
 
 class Route(IntEnum):
     CHARACTERS = 0
@@ -22,6 +24,12 @@ class Fetcher:
         Route.COMICS: "comics",
         Route.EVENTS: "events",
         Route.SERIES: "series",
+    }
+    LIST_PARSERS = {
+        Route.CHARACTERS: ResponseJsonParser.parse_list_characters,
+        Route.COMICS: ResponseJsonParser.parse_list_comics,
+        Route.EVENTS: ResponseJsonParser.parse_list_events,
+        Route.SERIES: ResponseJsonParser.parse_list_series
     }
 
     FILTERS_TEMPLATE = dict(
@@ -54,14 +62,19 @@ class Fetcher:
             **kwargs,
         )
 
-    def list_features(self, route, parser, **kwargs):
+    @staticmethod
+    def total_number(r_json):
+        return ResponseJsonParser.total_number(r_json)
+
+    def list_features(self, route, **kwargs):
+        parser = self.LIST_PARSERS[route]
         response = self.make_request(route, **kwargs)
-        features = []
+        parsed = {"total": 0, "count": 0, "features": []}
         if response.status_code == 200:
             r_json: ct.ResponseJSON = response.json()
-            features = parser(r_json)
-            for feature in features:
-                print(feature)
+            parsed["features"].extend(parser(r_json))
+            parsed["count"] = len(parsed["features"])
+            parsed["total"] = self.total_number(r_json)
         else:
             print(
                 f"""
@@ -69,43 +82,41 @@ class Fetcher:
     response.text is {response.text}
     """
             )
-        return features
+        return parsed
 
-    def get_feature_by_name(self, route, parser, name, limit=100, offset=0):
+    def get_feature_by_name(self, route, name, limit=100, offset=0):
         return self.list_features(
-            route, parser, name=name, limit=limit, offset=offset
+            route, name=name, limit=limit, offset=offset
         )
 
     def get_feature_by_name_starts_with(
-        self, route, parser, name_starts_with, limit=100, offset=0
+        self, route, name_starts_with, limit=100, offset=0
     ):
         return self.list_features(
             route,
-            parser,
             nameStartsWith=name_starts_with,
             limit=limit,
             offset=offset,
         )
 
-    def get_feature_by_title(self, route, parser, title, limit=100, offset=0):
+    def get_feature_by_title(self, route, title, limit=100, offset=0):
         return self.list_features(
-            route, parser, title=title, limit=limit, offset=offset
+            route, title=title, limit=limit, offset=offset
         )
 
     def get_feature_by_title_starts_with(
-        self, route, parser, title_starts_with, limit=100, offset=0
+        self, route, title_starts_with, limit=100, offset=0
     ):
         return self.list_features(
             route,
-            parser,
             titleStartsWith=title_starts_with,
             limit=limit,
             offset=offset,
         )
 
     def get_feature_from_year(
-        self, route, parser, start_year, limit=100, offset=0
+        self, route, start_year, limit=100, offset=0
     ):
         return self.list_features(
-            route, parser, startYear=start_year, limit=limit, offset=offset,
+            route, startYear=start_year, limit=limit, offset=offset,
         )

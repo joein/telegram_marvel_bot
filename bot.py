@@ -27,6 +27,8 @@ MENU = "MENU"
 STOPPING = "STOPPING"
 START_OVER = "START_OVER"
 BACK = "BACK"
+NEXT_PAGE = "NEXT_PAGE"
+PREV_PAGE = "PREV_PAGE"
 CHARACTERS, COMICS, SERIES, EVENTS = "_0", "_1", "_2", "_3"
 (
     LIST_CHARACTERS,
@@ -62,14 +64,11 @@ def start(update: Update, context: CallbackContext):
 
     buttons = [
         [
-            InlineKeyboardButton(
-                text="Characters", callback_data=CHARACTERS
-            ),
+            InlineKeyboardButton(text="Characters", callback_data=CHARACTERS),
             InlineKeyboardButton(text="Comics", callback_data=COMICS),
         ],
         [
             InlineKeyboardButton(text="Events", callback_data=EVENTS),
-
             InlineKeyboardButton(text="Series", callback_data=SERIES),
         ],
         [InlineKeyboardButton(text="Finish", callback_data=END),],
@@ -97,6 +96,9 @@ def characters_menu(update: Update, context: CallbackContext) -> str:
     logger.info(f"context user data {context.user_data}")
     logger.info(f"context chat data {context.chat_data}")
     logger.info(f"context match {context.match}")
+
+    context.bot_data["list_characters_offset"] = 0
+
     text = (
         "You may request list of characters (in alphabetical order), "
         "try to find character by exact name or by its beginning."
@@ -246,32 +248,56 @@ def end(update: Update, _: CallbackContext) -> int:
 # Second level conversation callbacks
 def list_characters(update: Update, context: CallbackContext):
     logger.info("List characters command")
+    limit = 10
     fetcher = context.bot_data["fetcher"]
-    chars = sorted([
-        character.name
-        for character in fetcher.list_features(
-            Route.CHARACTERS, limit=10, offset=0
-        )
-    ])
+    offset = context.bot_data.get("list_characters_offset", 0)
+    fetched_data = fetcher.list_features(
+        Route.CHARACTERS, limit=limit, offset=offset
+    )
+    logger.info(f"{limit + offset} and total {fetched_data['total']}")
+    has_more_pages = limit + offset < fetched_data["total"]
+
+    characters = fetched_data["features"]
+    chars = sorted([character.name for character in characters])
     buttons = [
         [InlineKeyboardButton(text=char_, callback_data=LIST_CHARACTERS,)]
         for char_ in chars
     ]
+    page_buttons = []
+    if offset:
+        page_buttons.append(
+            InlineKeyboardButton(text="Prev", callback_data=PREV_PAGE),
+        )
+    if has_more_pages:
+        buttons.append(
+            [InlineKeyboardButton(text="Next", callback_data=NEXT_PAGE,),]
+        )
+    buttons.append(page_buttons)
     buttons.append(
         [
             InlineKeyboardButton(text="Back", callback_data=BACK,),
             InlineKeyboardButton(text="Done", callback_data=END),
         ],
     )
-
     keyboard = InlineKeyboardMarkup(buttons)
 
     update.callback_query.answer()
     update.callback_query.edit_message_text(
         text=" ".join(chars), reply_markup=keyboard
     )
-
+    context.bot_data["list_characters_offset"] = offset + min(
+        limit, fetched_data["count"]
+    )
     return LIST_CHARACTERS
+
+
+def list_previous_characters(update: Update, context: CallbackContext):
+    limit = 10
+    current_offset = context.bot_data["list_characters_offset"]
+    subtract_value = limit + (current_offset % 10 or limit)
+
+    context.bot_data["list_characters_offset"] -= subtract_value
+    return list_characters(update, context)
 
 
 def find_character_by_name(update: Update, _: CallbackContext):
@@ -332,19 +358,21 @@ def find_character_by_name_beginning(update: Update, _: CallbackContext):
 def list_comics(update: Update, context: CallbackContext):
     logger.info("List comics command")
     fetcher = context.bot_data["fetcher"]
-    comics = sorted([
-        comic.title
-        for comic in fetcher.list_features(
-            Route.COMICS, limit=10, offset=0
-        )
-    ])
+    comics = sorted(
+        [
+            comic.title
+            for comic in fetcher.list_features(
+                Route.COMICS, limit=10, offset=0
+            )
+        ]
+    )
     buttons = [
-        [InlineKeyboardButton(text=comic, callback_data=LIST_COMICS, )]
+        [InlineKeyboardButton(text=comic, callback_data=LIST_COMICS,)]
         for comic in comics
     ]
     buttons.append(
         [
-            InlineKeyboardButton(text="Back", callback_data=BACK, ),
+            InlineKeyboardButton(text="Back", callback_data=BACK,),
             InlineKeyboardButton(text="Done", callback_data=END),
         ],
     )
@@ -422,19 +450,21 @@ def find_comic_by_title_beginning(update: Update, _: CallbackContext):
 def list_events(update: Update, context: CallbackContext):
     logger.info("List events command")
     fetcher = context.bot_data["fetcher"]
-    events = sorted([
-        event.name
-        for event in fetcher.list_features(
-            Route.EVENTS, limit=10, offset=0
-        )
-    ])
+    events = sorted(
+        [
+            event.name
+            for event in fetcher.list_features(
+                Route.EVENTS, limit=10, offset=0
+            )
+        ]
+    )
     buttons = [
-        [InlineKeyboardButton(text=event, callback_data=LIST_EVENTS, )]
+        [InlineKeyboardButton(text=event, callback_data=LIST_EVENTS,)]
         for event in events
     ]
     buttons.append(
         [
-            InlineKeyboardButton(text="Back", callback_data=BACK, ),
+            InlineKeyboardButton(text="Back", callback_data=BACK,),
             InlineKeyboardButton(text="Done", callback_data=END),
         ],
     )
@@ -510,19 +540,21 @@ def find_event_by_name_beginning(update: Update, _: CallbackContext):
 def list_series(update: Update, context: CallbackContext):
     logger.info("List series command")
     fetcher = context.bot_data["fetcher"]
-    series = sorted([
-        single_series.title
-        for single_series in fetcher.list_features(
-            Route.SERIES, limit=10, offset=0
-        )
-    ])
+    series = sorted(
+        [
+            single_series.title
+            for single_series in fetcher.list_features(
+                Route.SERIES, limit=10, offset=0
+            )
+        ]
+    )
     buttons = [
-        [InlineKeyboardButton(text=single_series, callback_data=LIST_SERIES, )]
+        [InlineKeyboardButton(text=single_series, callback_data=LIST_SERIES,)]
         for single_series in series
     ]
     buttons.append(
         [
-            InlineKeyboardButton(text="Back", callback_data=BACK, ),
+            InlineKeyboardButton(text="Back", callback_data=BACK,),
             InlineKeyboardButton(text="Done", callback_data=END),
         ],
     )
@@ -631,7 +663,15 @@ def main(bot_token, fetcher) -> None:
                 ),
             ],
             LIST_CHARACTERS: [
-                CallbackQueryHandler(characters_menu, pattern="^" + BACK + "$")
+                CallbackQueryHandler(
+                    characters_menu, pattern="^" + BACK + "$"
+                ),
+                CallbackQueryHandler(
+                    list_characters, pattern="^" + NEXT_PAGE + "$",
+                ),
+                CallbackQueryHandler(
+                    list_previous_characters, pattern="^" + PREV_PAGE + "$",
+                ),
             ],
             FIND_CHARACTER_BY_NAME: [
                 CallbackQueryHandler(characters_menu, pattern="^" + BACK + "$")
