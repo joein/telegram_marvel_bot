@@ -19,7 +19,7 @@ class ResponseJsonParser:
         for result in data["results"]:
             _id = result["id"]
             name = result["name"]
-            description = result.get("description", "")
+            description = desc if (desc := result.get("description")) else f"Sorry, I did not find description for {name} :("
             thumbnail: ct.Thumbnail = result.get(
                 "thumbnail", ct.Thumbnail(path="", extension="")
             )
@@ -48,7 +48,7 @@ class ResponseJsonParser:
                 comics=comics, events=events, stories=stories, series=series
             )
 
-            img_link = f"{thumbnail['path']}{thumbnail['extension']}"
+            img_link = f"{thumbnail['path']}.{thumbnail['extension']}"
 
             characters.append(
                 Character(
@@ -93,7 +93,7 @@ class ResponseJsonParser:
                     public_link["url"] = url
                 else:
                     print(f"COMICS {_type} not in public_links")
-            img_link = f"{thumbnail['path']}{thumbnail['extension']}"
+            img_link = f"{thumbnail['path']}.{thumbnail['extension']}"
 
             creators = []
             json_creators = result.get("creators", {})
@@ -148,7 +148,7 @@ class ResponseJsonParser:
                     public_link["url"] = url
                 else:
                     print(f"EVENTS {_type} not in public_links")
-            img_link = f"{thumbnail['path']}{thumbnail['extension']}"
+            img_link = f"{thumbnail['path']}.{thumbnail['extension']}"
 
             start = result["start"]
             end = result["end"]
@@ -196,7 +196,7 @@ class ResponseJsonParser:
                     public_link["url"] = url
                 else:
                     print(f"COMICS {_type} not in public_links")
-            img_link = f"{thumbnail['path']}{thumbnail['extension']}"
+            img_link = f"{thumbnail['path']}.{thumbnail['extension']}"
 
             creators = []
             json_creators = result.get("creators", {})

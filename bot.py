@@ -1,6 +1,11 @@
 import logging
 
-from telegram import InlineKeyboardMarkup, InlineKeyboardButton, Update
+from telegram import (
+    InlineKeyboardMarkup,
+    InlineKeyboardButton,
+    Update,
+    ParseMode,
+)
 from telegram.ext import (
     Updater,
     CommandHandler,
@@ -29,6 +34,8 @@ START_OVER = "START_OVER"
 BACK = "BACK"
 NEXT_PAGE = "NEXT_PAGE"
 PREV_PAGE = "PREV_PAGE"
+ASK_FOR_INPUT = "ASK_FOR_INPUT"
+TYPING = "TYPING"
 CHARACTERS, COMICS, SERIES, EVENTS = "_0", "_1", "_2", "_3"
 (
     LIST_CHARACTERS,
@@ -91,6 +98,8 @@ def start(update: Update, context: CallbackContext):
 
 
 def characters_menu(update: Update, context: CallbackContext) -> str:
+    if "data" in context.user_data:
+        del context.user_data["data"]
     logger.info("characters menu")
     logger.info(f"context bot data {context.bot_data}")
     logger.info(f"context user data {context.user_data}")
@@ -127,8 +136,17 @@ def characters_menu(update: Update, context: CallbackContext) -> str:
     keyboard = InlineKeyboardMarkup(buttons)
 
     logger.info("characters")
-    update.callback_query.answer()
-    update.callback_query.edit_message_text(text=text, reply_markup=keyboard)
+    if context.user_data.get("MSG_DELETED"):
+        del context.user_data["MSG_DELETED"]
+        logger.info(context.user_data.get("MSG_DELETED"))
+        context.bot.send_message(update.callback_query.message.chat_id,
+                                 text=text, reply_markup=keyboard)
+    else:
+        update.callback_query.answer()
+        logger.info(
+            f"update callbackquery mesage text {update.callback_query.message.text}"
+        )
+        update.callback_query.edit_message_text(text=text, reply_markup=keyboard)
     logger.info("returning characters")
     return CHARACTERS
 
@@ -258,9 +276,10 @@ def list_characters(update: Update, context: CallbackContext):
     has_more_pages = limit + offset < fetched_data["total"]
 
     characters = fetched_data["features"]
+    context.user_data["characters"] = characters
     chars = sorted([character.name for character in characters])
     buttons = [
-        [InlineKeyboardButton(text=char_, callback_data=LIST_CHARACTERS,)]
+        [InlineKeyboardButton(text=char_, callback_data=char_,)]
         for char_ in chars
     ]
     page_buttons = []
@@ -290,6 +309,28 @@ def list_characters(update: Update, context: CallbackContext):
     )
     return LIST_CHARACTERS
 
+def show_character(update: Update, context: CallbackContext):
+    character = None
+    for ch in context.user_data["characters"]:
+        if ch.name == update.callback_query.data:
+            character = ch
+            break
+    if character:
+        ch_name = character.name
+        description = character.description
+        wiki = f"wiki link: {character.wiki['url'].split('?utm')[0]}"
+        detail = f"comics link {character.detail['url'].split('?utm')[0]}"
+
+        caption = "\n\n".join((ch_name, description, wiki, detail))
+
+        context.bot.send_photo(update.callback_query.message.chat_id, character.img_link, caption=caption)
+
+    logger.info(update.callback_query.message)
+    update.callback_query.delete_message()
+    context.user_data["MSG_DELETED"] = True
+
+
+    return characters_menu(update, context)
 
 def list_previous_characters(update: Update, context: CallbackContext):
     limit = 10
@@ -300,58 +341,136 @@ def list_previous_characters(update: Update, context: CallbackContext):
     return list_characters(update, context)
 
 
-def find_character_by_name(update: Update, _: CallbackContext):
-    logger.info("Find character by name")
-    chars = [
-        "Find Ant-Man",
-        "Find Captain America",
-        "Find Iron-Man",
-        "Find Spider-Man",
-    ]
-    buttons = [
-        [
-            InlineKeyboardButton(
-                text=char_, callback_data=FIND_CHARACTER_BY_NAME,
-            )
-            for char_ in chars
-        ],
-        [
-            InlineKeyboardButton(text="Back", callback_data=BACK,),
-            InlineKeyboardButton(text="Done", callback_data=END),
-        ],
-    ]
-    keyboard = InlineKeyboardMarkup(buttons)
+def list_previous_characters_from_name_beginning(
+    update: Update, context: CallbackContext
+):
+    limit = 10
+    current_offset = context.bot_data["list_characters_offset"]
+    subtract_value = limit + (current_offset % 10 or limit)
 
-    update.callback_query.answer()
-    update.callback_query.edit_message_text(
-        text=" ".join(chars), reply_markup=keyboard
-    )
+    context.bot_data["list_characters_offset"] -= subtract_value
+    return find_character_by_name_beginning(update, context)
+
+
+def find_character_by_name(update: Update, context: CallbackContext):
+    logger.info("Find character by name")
+    if (name := context.user_data.get("data")) :
+
+        logger.info(f"name is {name}")
+        fetcher = context.bot_data["fetcher"]
+
+        fetched_data = fetcher.list_features(Route.CHARACTERS, name=name)
+        characters = fetched_data["features"]
+        chars = sorted([character.name for character in characters])
+
+        if chars:
+            ch = characters[0]
+            ch_name = ch.name
+            description = ch.description
+            wiki = f"wiki link: {ch.wiki['url'].split('?utm')[0]}"
+            detail = f"comics link {ch.detail['url'].split('?utm')[0]}"
+
+            caption = "\n\n".join((ch_name, description, wiki, detail))
+            update.message.reply_photo(ch.img_link, caption=caption)
+
+        else:
+            text = f"Sorry, I didn't found anything for {name}. Maybe you should try find character by name beginning"
+            update.message.reply_text(text=text)
+        buttons = [
+            [
+                InlineKeyboardButton(
+                    text="List Characters", callback_data=LIST_CHARACTERS
+                ),
+            ],
+            [
+                InlineKeyboardButton(
+                    text="Find character by name",
+                    callback_data=FIND_CHARACTER_BY_NAME,
+                ),
+                InlineKeyboardButton(
+                    text="Find character by name beginning",
+                    callback_data=FIND_CHARACTER_BY_NAME_BEGINNING,
+                ),
+            ],
+            [
+                InlineKeyboardButton(text="Back", callback_data=END),
+                InlineKeyboardButton(text="Done", callback_data=END),
+            ],
+        ]
+        keyboard = InlineKeyboardMarkup(buttons)
+        text = (
+            "You may search information about characters, comics, series, "
+            "events and etc.To abort, simply type /stop."
+        )
+        update.message.reply_text(text=text, reply_markup=keyboard)
+    else:
+        context.user_data["input_for"] = FIND_CHARACTER_BY_NAME
+        return ask_for_input(update, context)
 
     return FIND_CHARACTER_BY_NAME
 
 
-def find_character_by_name_beginning(update: Update, _: CallbackContext):
+def find_character_by_name_beginning(update: Update, context: CallbackContext):
     logger.info("Find character by name beginning")
-    chars = ["Find Ant", "Find Captain", "Find Iron", "Find Spider"]
-    buttons = [
-        [
-            InlineKeyboardButton(
-                text=char_, callback_data=FIND_CHARACTER_BY_NAME_BEGINNING,
-            )
+
+    if (name_beginning := context.user_data.get("data")) :
+        logger.info(f"name beginning is {name_beginning}")
+        limit = 10
+        offset = context.bot_data.get("list_characters_offset", 0)
+
+        fetcher = context.bot_data["fetcher"]
+        fetched_data = fetcher.list_features(
+            Route.CHARACTERS,
+            nameStartsWith=name_beginning,
+            limit=limit,
+            offset=offset,
+        )
+        logger.info(f"{limit + offset} and total {fetched_data['total']}")
+        has_more_pages = limit + offset < fetched_data["total"]
+
+        characters = fetched_data["features"]
+        chars = sorted([character.name for character in characters])
+        buttons = [
+            [InlineKeyboardButton(text=char_, callback_data=LIST_CHARACTERS,)]
             for char_ in chars
-        ],
-        [
-            InlineKeyboardButton(text="Back", callback_data=BACK,),
-            InlineKeyboardButton(text="Done", callback_data=END),
-        ],
-    ]
-    keyboard = InlineKeyboardMarkup(buttons)
+        ]
+        page_buttons = []
+        if offset:
+            page_buttons.append(
+                InlineKeyboardButton(text="Prev", callback_data=PREV_PAGE),
+            )
+        if has_more_pages:
+            buttons.append(
+                [InlineKeyboardButton(text="Next", callback_data=NEXT_PAGE,),]
+            )
+        buttons.append(page_buttons)
+        buttons.append(
+            [
+                InlineKeyboardButton(text="Back", callback_data=BACK,),
+                InlineKeyboardButton(text="Done", callback_data=END),
+            ],
+        )
+        context.bot_data["list_characters_offset"] = offset + min(
+            limit, fetched_data["count"]
+        )
+        keyboard = InlineKeyboardMarkup(buttons)
+        text = (
+            " ".join(chars)
+            if chars
+            else f"Sorry, I didn't found anything for {name_beginning}."
+        )
 
-    update.callback_query.answer()
-    update.callback_query.edit_message_text(
-        text=" ".join(chars), reply_markup=keyboard
-    )
+        if update.message:
 
+            update.message.reply_text(text=text, reply_markup=keyboard)
+        else:
+            update.callback_query.answer()
+            update.callback_query.edit_message_text(
+                text=text, reply_markup=keyboard
+            )
+    else:
+        context.user_data["input_for"] = FIND_CHARACTER_BY_NAME_BEGINNING
+        return ask_for_input(update, context)
     return FIND_CHARACTER_BY_NAME_BEGINNING
 
 
@@ -628,6 +747,39 @@ def find_series_by_title_beginning(update: Update, _: CallbackContext):
     return FIND_SERIES_BY_TITLE_BEGINNING
 
 
+def select_feature(feature, update: Update, context: CallbackContext):
+    features = {
+        FIND_CHARACTER_BY_NAME: find_character_by_name,
+        FIND_CHARACTER_BY_NAME_BEGINNING: find_character_by_name_beginning,
+    }
+    return features[feature](update, context)
+
+
+def save_input(update: Update, context: CallbackContext) -> str:
+    logger.info("save input")
+    """Save input for feature and return to feature selection."""
+    context.user_data["data"] = update.message.text
+
+    logger.info("return select feature")
+    logger.info(f'input for {context.user_data["input_for"]}')
+    return select_feature(context.user_data["input_for"], update, context)
+
+
+def ask_for_input(update: Update, context: CallbackContext) -> str:
+    logger.info("ask for input")
+    """Prompt user to input data for selected feature."""
+    context.user_data["data"] = update.callback_query.data
+    text = "Okay, input character name."
+    update.callback_query.answer()
+    update.callback_query.edit_message_text(text=text)
+    logger.info("return typing")
+    return ASK_FOR_INPUT
+
+
+def debug(update, context):
+    logger.critical('wooow')
+    update.callback_query.answer(text='wooow')
+
 def end_second_level(update: Update, context: CallbackContext) -> int:
     """Return to top level conversation."""
     logger.info("end second level")
@@ -662,7 +814,11 @@ def main(bot_token, fetcher) -> None:
                     pattern="^" + FIND_CHARACTER_BY_NAME_BEGINNING + "$",
                 ),
             ],
+            ASK_FOR_INPUT: [
+                MessageHandler(Filters.text & ~Filters.command, save_input),
+            ],
             LIST_CHARACTERS: [
+
                 CallbackQueryHandler(
                     characters_menu, pattern="^" + BACK + "$"
                 ),
@@ -672,12 +828,28 @@ def main(bot_token, fetcher) -> None:
                 CallbackQueryHandler(
                     list_previous_characters, pattern="^" + PREV_PAGE + "$",
                 ),
+                CallbackQueryHandler(
+                    show_character, pattern="^" + ".+" + "$",
+                ),
+
             ],
             FIND_CHARACTER_BY_NAME: [
-                CallbackQueryHandler(characters_menu, pattern="^" + BACK + "$")
+                CallbackQueryHandler(
+                    characters_menu, pattern="^" + BACK + "$"
+                ),
             ],
             FIND_CHARACTER_BY_NAME_BEGINNING: [
-                CallbackQueryHandler(characters_menu, pattern="^" + BACK + "$")
+                CallbackQueryHandler(
+                    characters_menu, pattern="^" + BACK + "$"
+                ),
+                CallbackQueryHandler(
+                    find_character_by_name_beginning,
+                    pattern="^" + NEXT_PAGE + "$",
+                ),
+                CallbackQueryHandler(
+                    list_previous_characters_from_name_beginning,
+                    pattern="^" + PREV_PAGE + "$",
+                ),
             ],
         },
         fallbacks=[
