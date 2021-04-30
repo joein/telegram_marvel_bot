@@ -250,7 +250,11 @@ def events_menu(update: Update, context: CallbackContext) -> str:
 
 
 def series_menu(update: Update, context: CallbackContext) -> str:
-    logger.info("series")
+    if "data" in context.user_data:
+        del context.user_data["data"]
+
+    context.bot_data["list_series_offset"] = 0
+
     text = (
         "You may request list of series (in alphabetical order), "
         "try to find series by exact title or by its beginning."
@@ -273,9 +277,23 @@ def series_menu(update: Update, context: CallbackContext) -> str:
     ]
     keyboard = InlineKeyboardMarkup(buttons)
 
-    logger.info("series")
-    update.callback_query.answer()
-    update.callback_query.edit_message_text(text=text, reply_markup=keyboard)
+    logger.info("comics")
+    if context.user_data.get("MSG_DELETED"):
+        del context.user_data["MSG_DELETED"]
+        logger.info(context.user_data.get("MSG_DELETED"))
+        context.bot.send_message(
+            update.callback_query.message.chat_id,
+            text=text,
+            reply_markup=keyboard,
+        )
+    else:
+        update.callback_query.answer()
+        logger.info(
+            f"update callbackquery message text {update.callback_query.message.text}"
+        )
+        update.callback_query.edit_message_text(
+            text=text, reply_markup=keyboard
+        )
     logger.info("returning series")
     return SERIES
 
@@ -434,6 +452,50 @@ def show_event(update: Update, context: CallbackContext):
     update.callback_query.delete_message()
     context.user_data["MSG_DELETED"] = True
     return events_menu(update, context)
+
+
+def show_series(update: Update, context: CallbackContext):
+    single_series = None
+    for single_series_ in context.user_data["series"]:
+
+        if single_series_.title[:64] == update.callback_query.data:
+            single_series = single_series_
+            break
+
+    if single_series:
+        detail = f"detail link: {single_series.detail['url'].split('?utm')[0] if single_series.detail else ''}"
+        next_series = f"Next series are: {single_series.next_series['name'] if single_series.next_series else ''}"
+        previous_series = f"Previous series are: {single_series.previous_series['name'] if single_series.previous_series else ''}"
+
+        + "\n".join(
+            (str(creator) for creator in single_series.creators)
+        )),
+        caption = "\n\n".join(
+            (
+                single_series.title,
+                single_series.description,
+                detail,
+                f"Start in: {single_series.start_year}",
+                f"Ends in: {single_series.end_year}",
+                next_series,
+                previous_series,
+                "Creators: "
+                + "\n".join(
+                    (str(creator) for creator in single_series.creators)
+                ),
+            )
+        )
+        context.bot.send_photo(
+            update.callback_query.message.chat_id,
+            single_series.img_link,
+            caption=caption,
+        )
+
+    logger.info(update.callback_query.message)
+    update.callback_query.delete_message()
+    context.user_data["MSG_DELETED"] = True
+
+    return series_menu(update, context)
 
 
 def list_previous_characters(update: Update, context: CallbackContext):
@@ -1133,93 +1195,292 @@ def list_previous_events_from_name(update: Update, context: CallbackContext):
 
 def list_series(update: Update, context: CallbackContext):
     logger.info("List series command")
+    limit = 10
     fetcher = context.bot_data["fetcher"]
-    series = sorted(
+    offset = context.bot_data.get("list_series_offset", 0)
+    fetched_data = fetcher.list_features(
+        Route.SERIES, limit=limit, offset=offset
+    )
+    logger.info(f"{limit + offset} and total {fetched_data['total']}")
+    has_more_pages = limit + offset < fetched_data["total"]
+
+    series = fetched_data["features"]
+    context.user_data["series"] = series
+    sorted_series = sorted([single_series.title for single_series in series])
+
+    buttons = [
         [
-            single_series.title
-            for single_series in fetcher.list_features(
-                Route.SERIES, limit=10, offset=0
+            InlineKeyboardButton(
+                text=series_title, callback_data=series_title[:64]
             )
         ]
-    )
-    buttons = [
-        [InlineKeyboardButton(text=single_series, callback_data=LIST_SERIES)]
-        for single_series in series
+        for series_title in sorted_series
     ]
+    page_buttons = []
+    if offset:
+        page_buttons.append(
+            InlineKeyboardButton(text="Prev", callback_data=PREV_PAGE)
+        )
+    if has_more_pages:
+        page_buttons.append(
+            InlineKeyboardButton(text="Next", callback_data=NEXT_PAGE)
+        )
+    buttons.append(page_buttons)
     buttons.append(
         [
             InlineKeyboardButton(text="Back", callback_data=BACK),
             InlineKeyboardButton(text="Done", callback_data=END),
         ],
     )
+
     keyboard = InlineKeyboardMarkup(buttons)
 
     update.callback_query.answer()
     update.callback_query.edit_message_text(
-        text=" ".join(series), reply_markup=keyboard
+        text="\n".join(sorted_series), reply_markup=keyboard
     )
-
+    context.bot_data["list_series_offset"] = offset + min(
+        limit, fetched_data["count"]
+    )
     return LIST_SERIES
 
 
-def find_series_by_title(update: Update, _: CallbackContext):
-    logger.info("Find series by title")
-    series = [
-        "Find Ant-Man series",
-        "Find Captain America series",
-        "Find Iron-Man series",
-        "Find Spider-Man series",
-    ]
-    buttons = [
-        [
-            InlineKeyboardButton(
-                text=series_, callback_data=FIND_SERIES_BY_TITLE
+def list_previous_series(update: Update, context: CallbackContext):
+    limit = 10
+    current_offset = context.bot_data["list_series_offset"]
+    subtract_value = limit + (current_offset % 10 or limit)
+
+    context.bot_data["list_series_offset"] -= subtract_value
+    return list_series(update, context)
+
+
+def find_series_by_title(update: Update, context: CallbackContext):
+    logger.info("Find series by title ")
+
+    if (title := context.user_data.get("data")) :
+        logger.info(f"title is {title}")
+        limit = 10
+        offset = context.bot_data.get("list_series_offset", 0)
+
+        fetcher = context.bot_data["fetcher"]
+        fetched_data = fetcher.list_features(
+            Route.SERIES, title=title, limit=limit, offset=offset,
+        )
+        logger.info(f"{limit + offset} and total {fetched_data['total']}")
+        has_more_pages = limit + offset < fetched_data["total"]
+
+        series = fetched_data["features"]
+        context.user_data["series"] = series
+
+        sorted_series = sorted(
+            [single_series.title for single_series in series]
+        )
+        buttons = [
+            [
+                InlineKeyboardButton(
+                    text=series_title, callback_data=series_title
+                )
+            ]
+            for series_title in sorted_series
+        ]
+        page_buttons = []
+        if offset:
+            page_buttons.append(
+                InlineKeyboardButton(text="Prev", callback_data=PREV_PAGE),
             )
-            for series_ in series
-        ],
-        [
-            InlineKeyboardButton(text="Back", callback_data=BACK),
-            InlineKeyboardButton(text="Done", callback_data=END),
-        ],
-    ]
-    keyboard = InlineKeyboardMarkup(buttons)
+        if has_more_pages:
+            page_buttons.append(
+                InlineKeyboardButton(text="Next", callback_data=NEXT_PAGE)
+            )
+        if page_buttons:
+            buttons.append(page_buttons)
+        if not buttons:
+            buttons = [
+                [
+                    InlineKeyboardButton(
+                        text="List Series", callback_data=LIST_SERIES
+                    ),
+                ],
+                [
+                    InlineKeyboardButton(
+                        text="Find series by title",
+                        callback_data=FIND_SERIES_BY_TITLE,
+                    ),
+                    InlineKeyboardButton(
+                        text="Find series by title beginning",
+                        callback_data=FIND_SERIES_BY_TITLE_BEGINNING,
+                    ),
+                ],
+                [
+                    InlineKeyboardButton(text="Back", callback_data=END),
+                    InlineKeyboardButton(text="Done", callback_data=END),
+                ],
+            ]
+            if "data" in context.user_data:
+                del context.user_data["data"]
+            text = f"Sorry, I didn't found anything for {title}. Maybe you should try find series by title beginning"
+            update.message.reply_text(text=text)
+            text = (
+                "You may request list of series (in alphabetical order), "
+                "try to find series by exact title or by its beginning."
+            )
+        else:
+            text = (
+                " ".join(sorted_series)
+                if series
+                else f"Sorry, I didn't found anything for {title} "
+                f"Maybe you should try find series by title beginning."
+            )
+            buttons.append(
+                [
+                    InlineKeyboardButton(text="Back", callback_data=BACK),
+                    InlineKeyboardButton(text="Done", callback_data=END),
+                ],
+            )
+        context.bot_data["list_series_offset"] = offset + min(
+            limit, fetched_data["count"]
+        )
+        keyboard = InlineKeyboardMarkup(buttons)
 
-    update.callback_query.answer()
-    update.callback_query.edit_message_text(
-        text=" ".join(series), reply_markup=keyboard
-    )
-
+        if update.message:
+            update.message.reply_text(text=text, reply_markup=keyboard)
+        else:
+            update.callback_query.answer()
+            update.callback_query.edit_message_text(
+                text=text, reply_markup=keyboard
+            )
+    else:
+        context.user_data["input_for"] = FIND_SERIES_BY_TITLE
+        return ask_for_input(update, context)
     return FIND_SERIES_BY_TITLE
 
 
-def find_series_by_title_beginning(update: Update, _: CallbackContext):
+def find_series_by_title_beginning(update: Update, context: CallbackContext):
     logger.info("Find series by title beginning")
-    series = [
-        "Find Ant series",
-        "Find Captain series",
-        "Find Iron series",
-        "Find Spider series",
-    ]
-    buttons = [
-        [
-            InlineKeyboardButton(
-                text=series_, callback_data=FIND_SERIES_BY_TITLE_BEGINNING
+
+    if (title_beginning := context.user_data.get("data")) :
+        logger.info(f"title beginning is {title_beginning}")
+        limit = 10
+        offset = context.bot_data.get("list_series_offset", 0)
+
+        fetcher = context.bot_data["fetcher"]
+        fetched_data = fetcher.list_features(
+            Route.SERIES,
+            titleStartsWith=title_beginning,
+            limit=limit,
+            offset=offset,
+        )
+        logger.info(f"{limit + offset} and total {fetched_data['total']}")
+        has_more_pages = limit + offset < fetched_data["total"]
+
+        series = fetched_data["features"]
+        context.user_data["series"] = series
+
+        sorted_series = sorted(
+            [single_series.title for single_series in series]
+        )
+        buttons = [
+            [
+                InlineKeyboardButton(
+                    text=series_title, callback_data=series_title
+                )
+            ]
+            for series_title in sorted_series
+        ]
+        page_buttons = []
+        if offset:
+            page_buttons.append(
+                InlineKeyboardButton(text="Prev", callback_data=PREV_PAGE),
             )
-            for series_ in series
-        ],
-        [
-            InlineKeyboardButton(text="Back", callback_data=BACK),
-            InlineKeyboardButton(text="Done", callback_data=END),
-        ],
-    ]
-    keyboard = InlineKeyboardMarkup(buttons)
+        if has_more_pages:
+            page_buttons.append(
+                InlineKeyboardButton(text="Next", callback_data=NEXT_PAGE)
+            )
+        if page_buttons:
+            buttons.append(page_buttons)
+        if not buttons:
+            if "data" in context.user_data:
+                del context.user_data["data"]
+            buttons = [
+                [
+                    InlineKeyboardButton(
+                        text="List Series", callback_data=LIST_SERIES
+                    ),
+                ],
+                [
+                    InlineKeyboardButton(
+                        text="Find series by title",
+                        callback_data=FIND_SERIES_BY_TITLE,
+                    ),
+                    InlineKeyboardButton(
+                        text="Find series by title beginning",
+                        callback_data=FIND_SERIES_BY_TITLE_BEGINNING,
+                    ),
+                ],
+                [
+                    InlineKeyboardButton(text="Back", callback_data=END),
+                    InlineKeyboardButton(text="Done", callback_data=END),
+                ],
+            ]
+            text = f"Sorry, I didn't found anything for {title_beginning}"
+            if update.message:
+                update.message.reply_text(text=text)
+            else:
+                update.callback_query.answer()
+                update.callback_query.edit_message_text(text=text)
+            text = (
+                "You may request list of series (in alphabetical order), "
+                "try to find series by exact title or by its beginning."
+            )
+        else:
+            text = (
+                " ".join(sorted_series)
+                if series
+                else f"Sorry, I didn't found anything for {title_beginning} "
+            )
+            buttons.append(
+                [
+                    InlineKeyboardButton(text="Back", callback_data=BACK),
+                    InlineKeyboardButton(text="Done", callback_data=END),
+                ],
+            )
+        context.bot_data["list_series_offset"] = offset + min(
+            limit, fetched_data["count"]
+        )
+        keyboard = InlineKeyboardMarkup(buttons)
 
-    update.callback_query.answer()
-    update.callback_query.edit_message_text(
-        text=" ".join(series), reply_markup=keyboard
-    )
+        if update.message:
 
+            update.message.reply_text(text=text, reply_markup=keyboard)
+        else:
+            update.callback_query.answer()
+            update.callback_query.edit_message_text(
+                text=text, reply_markup=keyboard
+            )
+    else:
+        context.user_data["input_for"] = FIND_SERIES_BY_TITLE_BEGINNING
+        return ask_for_input(update, context)
     return FIND_SERIES_BY_TITLE_BEGINNING
+
+
+def list_previous_series_from_title_beginning(
+    update: Update, context: CallbackContext
+):
+    limit = 10
+    current_offset = context.bot_data["list_series_offset"]
+    subtract_value = limit + (current_offset % 10 or limit)
+
+    context.bot_data["list_series_offset"] -= subtract_value
+    return find_series_by_title_beginning(update, context)
+
+
+def list_previous_series_from_title(update: Update, context: CallbackContext):
+    limit = 10
+    current_offset = context.bot_data["list_series_offset"]
+    subtract_value = limit + (current_offset % 10 or limit)
+
+    context.bot_data["list_series_offset"] -= subtract_value
+    return find_series_by_title_beginning(update, context)
 
 
 def select_feature(feature, update: Update, context: CallbackContext):
@@ -1256,11 +1517,6 @@ def ask_for_input(update: Update, context: CallbackContext) -> str:
     update.callback_query.edit_message_text(text=text)
     logger.info("return typing")
     return ASK_FOR_INPUT
-
-
-def debug(update, context):
-    logger.critical("wooow")
-    update.callback_query.answer(text="wooow")
 
 
 def end_second_level(update: Update, context: CallbackContext) -> int:
@@ -1531,41 +1787,6 @@ def main(bot_token, fetcher) -> None:
         ],
         map_to_parent={END: MENU, STOPPING: END,},
     )
-    # events_conv = ConversationHandler(
-    #     entry_points=[
-    #         CallbackQueryHandler(events_menu, pattern="^" + EVENTS + "$")
-    #     ],
-    #     states={
-    #         EVENTS: [
-    #             CallbackQueryHandler(
-    #                 list_events, pattern="^" + LIST_EVENTS + "$",
-    #             ),
-    #             CallbackQueryHandler(
-    #                 find_event_by_name, pattern="^" + FIND_EVENT_BY_NAME + "$",
-    #             ),
-    #             CallbackQueryHandler(
-    #                 find_event_by_name_beginning,
-    #                 pattern="^" + FIND_EVENT_BY_NAME_BEGINNING + "$",
-    #             ),
-    #         ],
-    #         LIST_EVENTS: [
-    #             CallbackQueryHandler(events_menu, pattern="^" + BACK + "$")
-    #         ],
-    #         FIND_EVENT_BY_NAME: [
-    #             CallbackQueryHandler(events_menu, pattern="^" + BACK + "$")
-    #         ],
-    #         FIND_EVENT_BY_NAME_BEGINNING: [
-    #             CallbackQueryHandler(events_menu, pattern="^" + BACK + "$")
-    #         ],
-    #     },
-    #     fallbacks=[
-    #         CommandHandler("stop", stop),
-    #         CallbackQueryHandler(
-    #             end_second_level, pattern="^" + str(END) + "$"
-    #         ),
-    #     ],
-    #     map_to_parent={END: MENU, STOPPING: END,},
-    # )
 
     series_conv = ConversationHandler(
         entry_points=[
@@ -1585,14 +1806,63 @@ def main(bot_token, fetcher) -> None:
                     pattern="^" + FIND_SERIES_BY_TITLE_BEGINNING + "$",
                 ),
             ],
+            ASK_FOR_INPUT: [
+                MessageHandler(Filters.text & ~Filters.command, save_input),
+            ],
             LIST_SERIES: [
-                CallbackQueryHandler(series_menu, pattern="^" + BACK + "$")
+                CallbackQueryHandler(series_menu, pattern="^" + BACK + "$"),
+                CallbackQueryHandler(
+                    list_series, pattern="^" + NEXT_PAGE + "$",
+                ),
+                CallbackQueryHandler(
+                    list_previous_series, pattern="^" + PREV_PAGE + "$",
+                ),
+                CallbackQueryHandler(show_series, pattern="^(?!-1).+$",),
             ],
             FIND_SERIES_BY_TITLE: [
-                CallbackQueryHandler(series_menu, pattern="^" + BACK + "$")
+                CallbackQueryHandler(
+                    find_series_by_title,
+                    pattern="^" + FIND_SERIES_BY_TITLE + "$",
+                ),
+                CallbackQueryHandler(
+                    find_series_by_title_beginning,
+                    pattern="^" + FIND_SERIES_BY_TITLE_BEGINNING + "$",
+                ),
+                CallbackQueryHandler(
+                    list_series, pattern="^" + LIST_SERIES + "$"
+                ),
+                CallbackQueryHandler(series_menu, pattern="^" + BACK + "$"),
+                CallbackQueryHandler(
+                    find_series_by_title, pattern="^" + NEXT_PAGE + "$",
+                ),
+                CallbackQueryHandler(
+                    list_previous_series_from_title,
+                    pattern="^" + PREV_PAGE + "$",
+                ),
+                CallbackQueryHandler(show_series, pattern="^(?!-1).+$",),
             ],
             FIND_SERIES_BY_TITLE_BEGINNING: [
-                CallbackQueryHandler(series_menu, pattern="^" + BACK + "$")
+                CallbackQueryHandler(
+                    find_series_by_title,
+                    pattern="^" + FIND_SERIES_BY_TITLE + "$",
+                ),
+                CallbackQueryHandler(
+                    find_series_by_title_beginning,
+                    pattern="^" + FIND_SERIES_BY_TITLE_BEGINNING + "$",
+                ),
+                CallbackQueryHandler(
+                    list_series, pattern="^" + LIST_SERIES + "$"
+                ),
+                CallbackQueryHandler(series_menu, pattern="^" + BACK + "$"),
+                CallbackQueryHandler(
+                    find_series_by_title_beginning,
+                    pattern="^" + NEXT_PAGE + "$",
+                ),
+                CallbackQueryHandler(
+                    list_previous_series_from_title_beginning,
+                    pattern="^" + PREV_PAGE + "$",
+                ),
+                CallbackQueryHandler(show_series, pattern="^(?!-1).+$",),
             ],
         },
         fallbacks=[

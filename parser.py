@@ -76,6 +76,8 @@ class ResponseJsonParser:
             description = result.get("description", "")
             if not description:
                 description = result.get("variantDescription", "")
+            if not description:
+                description = f"Sorry, I did not found description for {title} :("
             page_count = result["pageCount"]
             thumbnail: ct.Thumbnail = result.get(
                 "thumbnail", ct.Thumbnail(path="", extension="")
@@ -131,6 +133,8 @@ class ResponseJsonParser:
             description = result.get("description", "")
             if not description:
                 description = result.get("variantDescription", "")
+            if not description:
+                description = f"Sorry, I did not found description for {name}"
             thumbnail: ct.Thumbnail = result.get(
                 "thumbnail", ct.Thumbnail(path="", extension="")
             )
@@ -179,7 +183,7 @@ class ResponseJsonParser:
         for result in data["results"]:
             _id = result["id"]
             title = result["title"]
-            description = result.get("description", "")
+            description = desc if (desc := result.get("description")) else f"Sorry, I did not find description for {title} :("
             thumbnail: ct.Thumbnail = result.get(
                 "thumbnail", ct.Thumbnail(path="", extension="")
             )
@@ -195,7 +199,7 @@ class ResponseJsonParser:
                     public_link["type"] = _type
                     public_link["url"] = url
                 else:
-                    print(f"COMICS {_type} not in public_links")
+                    print(f"SERIES {_type} not in public_links")
             img_link = f"{thumbnail['path']}.{thumbnail['extension']}"
 
             creators = []
