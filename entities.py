@@ -7,6 +7,9 @@ class Creator:
         self.name = name
         self.role = role
 
+    def __repr__(self):
+        return f"{self.role}: {self.name}"
+
 
 class Character:
     def __init__(
