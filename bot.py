@@ -44,11 +44,11 @@ class States(enum.Enum):
     FIND_CHARACTER_BY_NAME = "FIND_CHARACTER_BY_NAME"
     FIND_CHARACTER_BY_NAME_BEGINNING = "FIND_CHARACTER_BY_NAME_BEGINNING"
     LIST_COMICS = "LIST_COMICS"
-    FIND_COMIC_BY_TITLE = 'FIND_COMIC_BY_TITLE'
-    FIND_COMIC_BY_TITLE_BEGINNING = 'FIND_COMIC_BY_TITLE_BEGINNING'
+    FIND_COMIC_BY_TITLE = "FIND_COMIC_BY_TITLE"
+    FIND_COMIC_BY_TITLE_BEGINNING = "FIND_COMIC_BY_TITLE_BEGINNING"
     LIST_EVENTS = "LIST_EVENTS"
     FIND_EVENT_BY_NAME = "FIND_EVENT_BY_NAME"
-    FIND_EVENT_BY_NAME_BEGINNING = 'FIND_EVENT_BY_NAME_BEGINNING'
+    FIND_EVENT_BY_NAME_BEGINNING = "FIND_EVENT_BY_NAME_BEGINNING"
     LIST_SERIES = "LIST_SERIES"
     FIND_SERIES_BY_TITLE = "FIND_SERIES_BY_TITLE"
     FIND_SERIES_BY_TITLE_BEGINNING = "FIND_SERIES_BY_TITLE_BEGINNING"
@@ -66,153 +66,132 @@ class _CustomKeyboard:
     def main_menu():
         buttons = [
             [
-                InlineKeyboardButton(text="Characters",
-                                     callback_data=States.CHARACTERS.value),
-                InlineKeyboardButton(text="Comics",
-                                     callback_data=States.COMICS.value),
+                InlineKeyboardButton(
+                    text="Characters", callback_data=States.CHARACTERS.value
+                ),
+                InlineKeyboardButton(
+                    text="Comics", callback_data=States.COMICS.value
+                ),
             ],
             [
-                InlineKeyboardButton(text="Events",
-                                     callback_data=States.EVENTS.value),
-                InlineKeyboardButton(text="Series",
-                                     callback_data=States.SERIES.value),
+                InlineKeyboardButton(
+                    text="Events", callback_data=States.EVENTS.value
+                ),
+                InlineKeyboardButton(
+                    text="Series", callback_data=States.SERIES.value
+                ),
             ],
-            [InlineKeyboardButton(text="Finish",
-                                  callback_data=States.END.value)],
+            [
+                InlineKeyboardButton(
+                    text="Finish", callback_data=States.END.value
+                )
+            ],
         ]
 
         return InlineKeyboardMarkup(buttons)
 
     @staticmethod
-    def characters_menu():
+    def _inner_menu(
+        features, list_state, find_by_name_state, find_by_name_beginning_state
+    ):
         buttons = [
             [
                 InlineKeyboardButton(
-                    text="List Characters",
-                    callback_data=States.LIST_CHARACTERS.value
+                    text=f"List {features}", callback_data=list_state,
                 ),
             ],
             [
                 InlineKeyboardButton(
-                    text="Find by name",
-                    callback_data=States.FIND_CHARACTER_BY_NAME.value,
+                    text="Find by name", callback_data=find_by_name_state,
                 ),
             ],
             [
                 InlineKeyboardButton(
                     text="Find by name beginning",
-                    callback_data=States.FIND_CHARACTER_BY_NAME_BEGINNING.value,
+                    callback_data=find_by_name_beginning_state,
                 ),
             ],
             [
-                InlineKeyboardButton(text="Back",
-                                     callback_data=States.END.value),
-                InlineKeyboardButton(text="Done",
-                                     callback_data=States.END.value),
-            ],
-        ]
-        keyboard = InlineKeyboardMarkup(buttons)
-        return keyboard
-
-    @staticmethod
-    def comics_menu():
-        buttons = [
-            [InlineKeyboardButton(text="List Comics",
-                                  callback_data=States.LIST_COMICS.value), ],
-            [
                 InlineKeyboardButton(
-                    text="Find by title",
-                    callback_data=States.FIND_COMIC_BY_TITLE.value
-                ), ],
-            [InlineKeyboardButton(
-                text="Find by title beginning",
-                callback_data=States.FIND_COMIC_BY_TITLE_BEGINNING.value,
-            ),
-            ],
-            [
-                InlineKeyboardButton(text="Back",
-                                     callback_data=States.END.value),
-                InlineKeyboardButton(text="Done",
-                                     callback_data=States.END.value),
-            ],
-        ]
-        keyboard = InlineKeyboardMarkup(buttons)
-        return keyboard
-
-    @staticmethod
-    def events_menu():
-        buttons = [
-            [InlineKeyboardButton(text="List Events",
-                                  callback_data=States.LIST_EVENTS.value)],
-            [
-                InlineKeyboardButton(
-                    text="Find by name",
-                    callback_data=States.FIND_EVENT_BY_NAME.value
-                ), ], [
-                InlineKeyboardButton(
-                    text="Find by name beginning",
-                    callback_data=States.FIND_EVENT_BY_NAME_BEGINNING.value,
-                ),
-            ],
-            [
-                InlineKeyboardButton(text="Back",
-                                     callback_data=States.END.value),
-                InlineKeyboardButton(text="Done",
-                                     callback_data=States.END.value),
-            ],
-        ]
-        keyboard = InlineKeyboardMarkup(buttons)
-        return keyboard
-
-    @staticmethod
-    def series_menu():
-        buttons = [
-            [InlineKeyboardButton(text="List Series",
-                                  callback_data=States.LIST_SERIES.value), ],
-            [
-                InlineKeyboardButton(
-                    text="Find series by title",
-                    callback_data=States.FIND_SERIES_BY_TITLE.value
+                    text="Back", callback_data=States.END.value
                 ),
                 InlineKeyboardButton(
-                    text="Find series by title beginning",
-                    callback_data=States.FIND_SERIES_BY_TITLE_BEGINNING.value,
+                    text="Done", callback_data=States.END.value
                 ),
-            ],
-            [
-                InlineKeyboardButton(text="Back",
-                                     callback_data=States.END.value),
-                InlineKeyboardButton(text="Done",
-                                     callback_data=States.END.value),
             ],
         ]
         keyboard = InlineKeyboardMarkup(buttons)
         return keyboard
 
     @classmethod
+    def characters_menu(cls):
+        return cls._inner_menu(
+            "Characters",
+            States.LIST_CHARACTERS.value,
+            States.FIND_CHARACTER_BY_NAME.value,
+            States.FIND_CHARACTER_BY_NAME_BEGINNING.value,
+        )
+
+    @classmethod
+    def comics_menu(cls):
+        return cls._inner_menu(
+            "Comics",
+            States.LIST_COMICS.value,
+            States.FIND_COMIC_BY_TITLE.value,
+            States.FIND_COMIC_BY_TITLE_BEGINNING.value,
+        )
+
+    @classmethod
+    def events_menu(cls):
+        return cls._inner_menu(
+            "Events",
+            States.LIST_EVENTS.value,
+            States.FIND_EVENT_BY_NAME.value,
+            States.FIND_EVENT_BY_NAME_BEGINNING.value,
+        )
+
+    @classmethod
+    def series_menu(cls):
+        return cls._inner_menu(
+            "Series",
+            States.LIST_SERIES.value,
+            States.FIND_SERIES_BY_TITLE.value,
+            States.FIND_SERIES_BY_TITLE_BEGINNING.value,
+        )
+
+    @classmethod
     def keyboard_from_iterable(cls, iterable, prev_required, next_required):
         buttons = [
-            [InlineKeyboardButton(text=item, callback_data=item[:cls.CALLBACK_DATA_MAX_LENGTH])]
+            [
+                InlineKeyboardButton(
+                    text=item,
+                    callback_data=item[: cls.CALLBACK_DATA_MAX_LENGTH],
+                )
+            ]
             for item in iterable
         ]
         page_buttons = []
         if prev_required:
             page_buttons.append(
-                InlineKeyboardButton(text="Prev",
-                                     callback_data=States.PREV_PAGE.value),
+                InlineKeyboardButton(
+                    text="Prev", callback_data=States.PREV_PAGE.value
+                ),
             )
         if next_required:
             page_buttons.append(
-                InlineKeyboardButton(text="Next",
-                                     callback_data=States.NEXT_PAGE.value)
+                InlineKeyboardButton(
+                    text="Next", callback_data=States.NEXT_PAGE.value
+                )
             )
         buttons.append(page_buttons)
         buttons.append(
             [
-                InlineKeyboardButton(text="Back",
-                                     callback_data=States.BACK.value),
-                InlineKeyboardButton(text="Done",
-                                     callback_data=States.END.value),
+                InlineKeyboardButton(
+                    text="Back", callback_data=States.BACK.value
+                ),
+                InlineKeyboardButton(
+                    text="Done", callback_data=States.END.value
+                ),
             ],
         )
         keyboard = InlineKeyboardMarkup(buttons)
@@ -227,13 +206,68 @@ class CustomKeyboard(_CustomKeyboard):
     series_menu = _CustomKeyboard.series_menu()
 
 
-# Top level conversation callbacks
+class _Text:
+    greetings = (
+        "Hi, I'm Marvel Bot and I'm here to help you gather "
+        "information about Marvel Universe."
+    )
+
+    stop = "Okay, bye."
+    end = "See you around!"
+    ask_for_input = "Okay, tell me."
+
+    @staticmethod
+    def menu():
+        return (
+            "You may search information about characters, comics, series, "
+            "events and etc.To abort, simply type /stop."
+        )
+
+    @staticmethod
+    def _inner_menu(features, criterion):
+        text = f"You may request list of {features} (in alphabetical order), try to find {features} by exact {criterion} or by its beginning"
+        return text
+
+    @classmethod
+    def characters_menu(cls):
+        return cls._inner_menu("characters", "name")
+
+    @classmethod
+    def comics_menu(cls):
+        return cls._inner_menu("comics", "title")
+
+    @classmethod
+    def events_menu(cls):
+        return cls._inner_menu("events", "name")
+
+    @classmethod
+    def series_menu(cls):
+        return cls._inner_menu("series", "title")
+
+    @staticmethod
+    def not_found_by_name(name):
+        return f"Sorry, I didn't found anything for {name}. Maybe you should try find it by name beginning"
+
+    @staticmethod
+    def not_found_by_name_beginning(name_beginning):
+        return f"Sorry, I didn't found anything for {name_beginning}."
+
+    @staticmethod
+    def from_container(container, sep="\n"):
+        return sep.join(container)
+
+
+class Text(_Text):
+    menu = _Text.menu()
+    characters_menu = _Text.characters_menu()
+    comics_menu = _Text.comics_menu()
+    events_menu = _Text.events_menu()
+    series_menu = _Text.series_menu()
+
+
 def start(update: Update, context: CallbackContext):
     logger.info("start")
-    text = (
-        "You may search information about characters, comics, series, "
-        "events and etc.To abort, simply type /stop."
-    )
+    text = Text.menu
 
     if context.user_data.get(START_OVER):
         update.callback_query.answer()
@@ -241,11 +275,10 @@ def start(update: Update, context: CallbackContext):
             text=text, reply_markup=CustomKeyboard.main_menu
         )
     else:
+        update.message.reply_text(Text.greetings)
         update.message.reply_text(
-            "Hi, I'm Marvel Bot and I'm here to help you gather information "
-            "about Marvel Universe."
+            text=text, reply_markup=CustomKeyboard.main_menu
         )
-        update.message.reply_text(text=text, reply_markup=CustomKeyboard.main_menu)
     context.user_data[START_OVER] = False
     logger.info("returning menu")
     return States.MENU.value
@@ -257,10 +290,7 @@ def characters_menu(update: Update, context: CallbackContext) -> str:
 
     context.bot_data["list_characters_offset"] = 0
 
-    text = (
-        "You may request list of characters (in alphabetical order), "
-        "try to find character by exact name or by its beginning."
-    )
+    text = Text.characters_menu
     keyboard = CustomKeyboard.characters_menu
 
     logger.info("characters")
@@ -290,10 +320,7 @@ def comics_menu(update: Update, context: CallbackContext) -> str:
 
     context.bot_data["list_comics_offset"] = 0
 
-    text = (
-        "You may request list of comics (in alphabetical order), "
-        "try to find comic by exact title or by its beginning."
-    )
+    text = Text.comics_menu
     keyboard = CustomKeyboard.comics_menu
 
     logger.info("comics")
@@ -323,10 +350,7 @@ def events_menu(update: Update, context: CallbackContext) -> str:
 
     context.bot_data["list_events_offset"] = 0
 
-    text = (
-        "You may request list of events (in alphabetical order), "
-        "try to find comic by exact title or by its beginning."
-    )
+    text = Text.events_menu
     keyboard = CustomKeyboard.events_menu
 
     logger.info("events")
@@ -356,13 +380,10 @@ def series_menu(update: Update, context: CallbackContext) -> str:
 
     context.bot_data["list_series_offset"] = 0
 
-    text = (
-        "You may request list of series (in alphabetical order), "
-        "try to find series by exact title or by its beginning."
-    )
+    text = Text.series_menu
     keyboard = CustomKeyboard.series_menu
 
-    logger.info("comics")
+    logger.info("series")
     if context.user_data.get("MSG_DELETED"):
         del context.user_data["MSG_DELETED"]
         logger.info(context.user_data.get("MSG_DELETED"))
@@ -384,14 +405,13 @@ def series_menu(update: Update, context: CallbackContext) -> str:
 
 
 def stop(update: Update, _: CallbackContext):
-    update.message.reply_text("Okay, bye.")
+    update.message.reply_text(Text.stop)
     return States.END.value
 
 
 def end(update: Update, _: CallbackContext):
     update.callback_query.answer()
-    text = "See you around!"
-    update.callback_query.edit_message_text(text=text)
+    update.callback_query.edit_message_text(text=Text.end)
     return States.END.value
 
 
@@ -409,11 +429,13 @@ def list_characters(update: Update, context: CallbackContext):
     characters = fetched_data["features"]
     context.user_data["characters"] = characters
     sorted_characters = sorted([character.name for character in characters])
-    keyboard = CustomKeyboard.keyboard_from_iterable(sorted_characters, bool(offset), has_more_pages)
+    keyboard = CustomKeyboard.keyboard_from_iterable(
+        sorted_characters, bool(offset), has_more_pages
+    )
 
     update.callback_query.answer()
     update.callback_query.edit_message_text(
-        text=" ".join(sorted_characters), reply_markup=keyboard
+        text=Text.from_container(sorted_characters), reply_markup=keyboard
     )
     context.bot_data["list_characters_offset"] = offset + min(
         limit, fetched_data["count"]
@@ -593,14 +615,11 @@ def find_character_by_name(update: Update, context: CallbackContext):
             caption = "\n\n".join((ch_name, description, wiki, detail))
             update.message.reply_photo(ch.img_link, caption=caption)
         else:
-            text = f"Sorry, I didn't found anything for {name}. Maybe you should try find character by name beginning"
+            text = Text.not_found_by_name(name)
             update.message.reply_text(text=text)
 
         keyboard = CustomKeyboard.characters_menu
-        text = (
-            "You may search information about characters, comics, series, "
-            "events and etc.To abort, simply type /stop."
-        )
+        text = Text.characters_menu
         update.message.reply_text(text=text, reply_markup=keyboard)
         if "data" in context.user_data:
             del context.user_data["data"]
@@ -632,21 +651,24 @@ def find_character_by_name_beginning(update: Update, context: CallbackContext):
         characters = fetched_data["features"]
         context.user_data["characters"] = characters
 
-        sorted_characters = sorted([character.name for character in characters])
-        keyboard = CustomKeyboard.keyboard_from_iterable(sorted_characters, bool(offset), has_more_pages)
+        sorted_characters = sorted(
+            [character.name for character in characters]
+        )
+        keyboard = CustomKeyboard.keyboard_from_iterable(
+            sorted_characters, bool(offset), has_more_pages
+        )
 
         context.bot_data["list_characters_offset"] = offset + min(
             limit, fetched_data["count"]
         )
 
         text = (
-            " ".join(sorted_characters)
+            Text.from_container(sorted_characters)
             if characters
-            else f"Sorry, I didn't found anything for {name_beginning}."
+            else Text.not_found_by_name_beginning(name_beginning)
         )
 
         if update.message:
-
             update.message.reply_text(text=text, reply_markup=keyboard)
         else:
             update.callback_query.answer()
@@ -654,7 +676,9 @@ def find_character_by_name_beginning(update: Update, context: CallbackContext):
                 text=text, reply_markup=keyboard
             )
     else:
-        context.user_data["input_for"] = States.FIND_CHARACTER_BY_NAME_BEGINNING.value
+        context.user_data[
+            "input_for"
+        ] = States.FIND_CHARACTER_BY_NAME_BEGINNING.value
         return ask_for_input(update, context)
     return States.FIND_CHARACTER_BY_NAME_BEGINNING.value
 
@@ -674,11 +698,13 @@ def list_comics(update: Update, context: CallbackContext):
     context.user_data["comics"] = comics
     sorted_comics = sorted([comic.title for comic in comics])
 
-    keyboard = CustomKeyboard.keyboard_from_iterable(sorted_comics, bool(offset), has_more_pages)
+    keyboard = CustomKeyboard.keyboard_from_iterable(
+        sorted_comics, bool(offset), has_more_pages
+    )
 
     update.callback_query.answer()
     update.callback_query.edit_message_text(
-        text="\n".join(sorted_comics), reply_markup=keyboard
+        text=Text.from_container(sorted_comics), reply_markup=keyboard
     )
     context.bot_data["list_comics_offset"] = offset + min(
         limit, fetched_data["count"]
@@ -714,25 +740,19 @@ def find_comic_by_title(update: Update, context: CallbackContext):
         context.user_data["comics"] = comics
 
         sorted_comics = sorted([comic.title for comic in comics])
-        keyboard = CustomKeyboard.keyboard_from_iterable(sorted_comics, bool(offset), has_more_pages)
+        keyboard = CustomKeyboard.keyboard_from_iterable(
+            sorted_comics, bool(offset), has_more_pages
+        )
+        text = Text.from_container(sorted_comics)
+
         if not keyboard:
             keyboard = CustomKeyboard.comics_menu
 
             if "data" in context.user_data:
                 del context.user_data["data"]
-            text = f"Sorry, I didn't found anything for {title}. Maybe you should try find comic by title beginning"
+            text = Text.not_found_by_name(title)
             update.message.reply_text(text=text)
-            text = (
-                "You may request list of comics (in alphabetical order), "
-                "try to find comic by exact title or by its beginning."
-            )
-        else:
-            text = (
-                " ".join(sorted_comics)
-                if comics
-                else f"Sorry, I didn't found anything for {title} "
-                f"Maybe you should try find comic by title beginning."
-            )
+            text = Text.comics_menu
 
         context.bot_data["list_comics_offset"] = offset + min(
             limit, fetched_data["count"]
@@ -773,37 +793,30 @@ def find_comic_by_title_beginning(update: Update, context: CallbackContext):
         context.user_data["comics"] = comics
 
         sorted_comics = sorted([comic.title for comic in comics])
-        keyboard = CustomKeyboard.keyboard_from_iterable(sorted_comics, bool(offset), has_more_pages)
-
+        keyboard = CustomKeyboard.keyboard_from_iterable(
+            sorted_comics, bool(offset), has_more_pages
+        )
+        text = Text.from_container(sorted_comics)
         if not keyboard:
             keyboard = CustomKeyboard.comics_menu
             if "data" in context.user_data:
                 del context.user_data["data"]
 
-            text = f"Sorry, I didn't found anything for {title_beginning}"
+            text = Text.not_found_by_name_beginning(title_beginning)
+
             if update.message:
                 update.message.reply_text(text=text)
             else:
                 update.callback_query.answer()
                 update.callback_query.edit_message_text(text=text)
-            text = (
-                "You may request list of comics (in alphabetical order), "
-                "try to find comic by exact title or by its beginning."
-            )
-        else:
-            text = (
-                " ".join(sorted_comics)
-                if comics
-                else f"Sorry, I didn't found anything for {title_beginning} "
-            )
+
+            text = Text.comics_menu
 
         context.bot_data["list_comics_offset"] = offset + min(
             limit, fetched_data["count"]
         )
 
-
         if update.message:
-
             update.message.reply_text(text=text, reply_markup=keyboard)
         else:
             update.callback_query.answer()
@@ -811,7 +824,9 @@ def find_comic_by_title_beginning(update: Update, context: CallbackContext):
                 text=text, reply_markup=keyboard
             )
     else:
-        context.user_data["input_for"] = States.FIND_COMIC_BY_TITLE_BEGINNING.value
+        context.user_data[
+            "input_for"
+        ] = States.FIND_COMIC_BY_TITLE_BEGINNING.value
         return ask_for_input(update, context)
     return States.FIND_COMIC_BY_TITLE_BEGINNING.value
 
@@ -850,11 +865,13 @@ def list_events(update: Update, context: CallbackContext):
     events = fetched_data["features"]
     context.user_data["events"] = events
     sorted_events = sorted([event.name for event in events])
-    keyboard = CustomKeyboard.keyboard_from_iterable(sorted_events, bool(offset), has_more_pages)
+    keyboard = CustomKeyboard.keyboard_from_iterable(
+        sorted_events, bool(offset), has_more_pages
+    )
 
     update.callback_query.answer()
     update.callback_query.edit_message_text(
-        text=" ".join(sorted_events), reply_markup=keyboard
+        text=Text.from_container(sorted_events), reply_markup=keyboard
     )
     context.bot_data["list_events_offset"] = offset + min(
         limit, fetched_data["count"]
@@ -890,25 +907,19 @@ def find_event_by_name(update: Update, context: CallbackContext):
         context.user_data["events"] = events
 
         sorted_events = sorted([event.name for event in events])
-        keyboard = CustomKeyboard.keyboard_from_iterable(sorted_events, bool(offset), has_more_pages)
+        keyboard = CustomKeyboard.keyboard_from_iterable(
+            sorted_events, bool(offset), has_more_pages
+        )
+        text = Text.from_container(sorted_events)
+
         if not keyboard:
             keyboard = CustomKeyboard.events_menu
 
             if "data" in context.user_data:
                 del context.user_data["data"]
-            text = f"Sorry, I didn't found anything for {name}. Maybe you should try find event by name beginning"
+            text = Text.not_found_by_name(name)
             update.message.reply_text(text=text)
-            text = (
-                "You may request list of events (in alphabetical order), "
-                "try to find event by exact title or by its beginning."
-            )
-        else:
-            text = (
-                " ".join(sorted_events)
-                if events
-                else f"Sorry, I didn't found anything for {name} "
-                f"Maybe you should try find event by name beginning."
-            )
+            text = Text.events_menu
 
         context.bot_data["list_events_offset"] = offset + min(
             limit, fetched_data["count"]
@@ -949,35 +960,28 @@ def find_event_by_name_beginning(update: Update, context: CallbackContext):
         context.user_data["events"] = events
 
         sorted_events = sorted([event.name for event in events])
-        keyboard = CustomKeyboard.keyboard_from_iterable(sorted_events, bool(offset), has_more_pages)
+        keyboard = CustomKeyboard.keyboard_from_iterable(
+            sorted_events, bool(offset), has_more_pages
+        )
+        text = Text.from_container(sorted_events)
 
         if not keyboard:
             if "data" in context.user_data:
                 del context.user_data["data"]
             keyboard = CustomKeyboard.events_menu
-            text = f"Sorry, I didn't found anything for {name_beginning}"
+            text = Text.not_found_by_name_beginning(name_beginning)
             if update.message:
                 update.message.reply_text(text=text)
             else:
                 update.callback_query.answer()
                 update.callback_query.edit_message_text(text=text)
-            text = (
-                "You may request list of events (in alphabetical order), "
-                "try to find event by exact name or by its beginning."
-            )
-        else:
-            text = (
-                " ".join(sorted_events)
-                if events
-                else f"Sorry, I didn't found anything for {name_beginning} "
-            )
+            text = Text.events_menu
 
         context.bot_data["list_events_offset"] = offset + min(
             limit, fetched_data["count"]
         )
 
         if update.message:
-
             update.message.reply_text(text=text, reply_markup=keyboard)
         else:
             update.callback_query.answer()
@@ -985,7 +989,9 @@ def find_event_by_name_beginning(update: Update, context: CallbackContext):
                 text=text, reply_markup=keyboard
             )
     else:
-        context.user_data["input_for"] = States.FIND_EVENT_BY_NAME_BEGINNING.value
+        context.user_data[
+            "input_for"
+        ] = States.FIND_EVENT_BY_NAME_BEGINNING.value
         return ask_for_input(update, context)
     return States.FIND_EVENT_BY_NAME_BEGINNING.value
 
@@ -1024,11 +1030,13 @@ def list_series(update: Update, context: CallbackContext):
     series = fetched_data["features"]
     context.user_data["series"] = series
     sorted_series = sorted([single_series.title for single_series in series])
-    keyboard = CustomKeyboard.keyboard_from_iterable(sorted_series, bool(offset), has_more_pages)
+    keyboard = CustomKeyboard.keyboard_from_iterable(
+        sorted_series, bool(offset), has_more_pages
+    )
 
     update.callback_query.answer()
     update.callback_query.edit_message_text(
-        text="\n".join(sorted_series), reply_markup=keyboard
+        text=Text.from_container(sorted_series), reply_markup=keyboard,
     )
     context.bot_data["list_series_offset"] = offset + min(
         limit, fetched_data["count"]
@@ -1066,25 +1074,17 @@ def find_series_by_title(update: Update, context: CallbackContext):
         sorted_series = sorted(
             [single_series.title for single_series in series]
         )
-        keyboard = CustomKeyboard.keyboard_from_iterable(sorted_series, bool(offset), has_more_pages)
-
+        keyboard = CustomKeyboard.keyboard_from_iterable(
+            sorted_series, bool(offset), has_more_pages
+        )
+        text = Text.from_container(sorted_series)
         if not keyboard:
             keyboard = CustomKeyboard.series_menu
             if "data" in context.user_data:
                 del context.user_data["data"]
-            text = f"Sorry, I didn't found anything for {title}. Maybe you should try find series by title beginning"
+            text = Text.not_found_by_name(title)
             update.message.reply_text(text=text)
-            text = (
-                "You may request list of series (in alphabetical order), "
-                "try to find series by exact title or by its beginning."
-            )
-        else:
-            text = (
-                " ".join(sorted_series)
-                if series
-                else f"Sorry, I didn't found anything for {title} "
-                f"Maybe you should try find series by title beginning."
-            )
+            text = Text.series_menu
 
         context.bot_data["list_series_offset"] = offset + min(
             limit, fetched_data["count"]
@@ -1127,36 +1127,29 @@ def find_series_by_title_beginning(update: Update, context: CallbackContext):
         sorted_series = sorted(
             [single_series.title for single_series in series]
         )
-        keyboard = CustomKeyboard.keyboard_from_iterable(sorted_series, bool(offset), has_more_pages)
+        keyboard = CustomKeyboard.keyboard_from_iterable(
+            sorted_series, bool(offset), has_more_pages
+        )
+        text = Text.from_container(sorted_series)
+
         if not keyboard:
             keyboard = CustomKeyboard.series_menu
             if "data" in context.user_data:
                 del context.user_data["data"]
 
-            text = f"Sorry, I didn't found anything for {title_beginning}"
+            text = Text.not_found_by_name_beginning(title_beginning)
             if update.message:
                 update.message.reply_text(text=text)
             else:
                 update.callback_query.answer()
                 update.callback_query.edit_message_text(text=text)
-            text = (
-                "You may request list of series (in alphabetical order), "
-                "try to find series by exact title or by its beginning."
-            )
-        else:
-            text = (
-                " ".join(sorted_series)
-                if series
-                else f"Sorry, I didn't found anything for {title_beginning} "
-            )
+            text = Text.series_menu
 
         context.bot_data["list_series_offset"] = offset + min(
             limit, fetched_data["count"]
         )
 
-
         if update.message:
-
             update.message.reply_text(text=text, reply_markup=keyboard)
         else:
             update.callback_query.answer()
@@ -1164,7 +1157,9 @@ def find_series_by_title_beginning(update: Update, context: CallbackContext):
                 text=text, reply_markup=keyboard
             )
     else:
-        context.user_data["input_for"] = States.FIND_SERIES_BY_TITLE_BEGINNING.value
+        context.user_data[
+            "input_for"
+        ] = States.FIND_SERIES_BY_TITLE_BEGINNING.value
         return ask_for_input(update, context)
     return States.FIND_SERIES_BY_TITLE_BEGINNING.value
 
@@ -1218,7 +1213,7 @@ def ask_for_input(update: Update, context: CallbackContext) -> str:
     logger.info("ask for input")
     """Prompt user to input data for selected feature."""
     context.user_data["data"] = update.callback_query.data
-    text = "Okay, tell me."
+    text = Text.ask_for_input
     update.callback_query.answer()
     update.callback_query.edit_message_text(text=text)
     logger.info("return typing")
@@ -1248,7 +1243,8 @@ def main(bot_token, fetcher) -> None:
         states={
             States.CHARACTERS.value: [
                 CallbackQueryHandler(
-                    list_characters, pattern="^" + States.LIST_CHARACTERS.value + "$",
+                    list_characters,
+                    pattern="^" + States.LIST_CHARACTERS.value + "$",
                 ),
                 CallbackQueryHandler(
                     find_character_by_name,
@@ -1256,7 +1252,9 @@ def main(bot_token, fetcher) -> None:
                 ),
                 CallbackQueryHandler(
                     find_character_by_name_beginning,
-                    pattern="^" + States.FIND_CHARACTER_BY_NAME_BEGINNING.value + "$",
+                    pattern="^"
+                    + States.FIND_CHARACTER_BY_NAME_BEGINNING.value
+                    + "$",
                 ),
             ],
             States.ASK_FOR_INPUT.value: [
@@ -1267,10 +1265,12 @@ def main(bot_token, fetcher) -> None:
                     characters_menu, pattern="^" + States.BACK.value + "$"
                 ),
                 CallbackQueryHandler(
-                    list_characters, pattern="^" + States.NEXT_PAGE.value + "$",
+                    list_characters,
+                    pattern="^" + States.NEXT_PAGE.value + "$",
                 ),
                 CallbackQueryHandler(
-                    list_previous_characters, pattern="^" + States.PREV_PAGE.value + "$",
+                    list_previous_characters,
+                    pattern="^" + States.PREV_PAGE.value + "$",
                 ),
                 CallbackQueryHandler(show_character, pattern="^(?!-1).+$",),
             ],
@@ -1281,10 +1281,13 @@ def main(bot_token, fetcher) -> None:
                 ),
                 CallbackQueryHandler(
                     find_character_by_name_beginning,
-                    pattern="^" + States.FIND_CHARACTER_BY_NAME_BEGINNING.value + "$",
+                    pattern="^"
+                    + States.FIND_CHARACTER_BY_NAME_BEGINNING.value
+                    + "$",
                 ),
                 CallbackQueryHandler(
-                    list_characters, pattern="^" + States.LIST_CHARACTERS.value + "$"
+                    list_characters,
+                    pattern="^" + States.LIST_CHARACTERS.value + "$",
                 ),
                 CallbackQueryHandler(
                     characters_menu, pattern="^" + States.BACK.value + "$"
@@ -1297,10 +1300,13 @@ def main(bot_token, fetcher) -> None:
                 ),
                 CallbackQueryHandler(
                     find_character_by_name_beginning,
-                    pattern="^" + States.FIND_CHARACTER_BY_NAME_BEGINNING.value + "$",
+                    pattern="^"
+                    + States.FIND_CHARACTER_BY_NAME_BEGINNING.value
+                    + "$",
                 ),
                 CallbackQueryHandler(
-                    list_characters, pattern="^" + States.LIST_CHARACTERS.value + "$"
+                    list_characters,
+                    pattern="^" + States.LIST_CHARACTERS.value + "$",
                 ),
                 CallbackQueryHandler(
                     characters_menu, pattern="^" + States.BACK.value + "$"
@@ -1322,12 +1328,17 @@ def main(bot_token, fetcher) -> None:
                 end_second_level, pattern="^" + str(States.END.value) + "$"
             ),
         ],
-        map_to_parent={States.END.value: States.MENU.value, States.STOPPING.value: States.END.value,},
+        map_to_parent={
+            States.END.value: States.MENU.value,
+            States.STOPPING.value: States.END.value,
+        },
     )
 
     comics_conv = ConversationHandler(
         entry_points=[
-            CallbackQueryHandler(comics_menu, pattern="^" + States.COMICS.value + "$")
+            CallbackQueryHandler(
+                comics_menu, pattern="^" + States.COMICS.value + "$"
+            )
         ],
         states={
             States.COMICS.value: [
@@ -1340,19 +1351,24 @@ def main(bot_token, fetcher) -> None:
                 ),
                 CallbackQueryHandler(
                     find_comic_by_title_beginning,
-                    pattern="^" + States.FIND_COMIC_BY_TITLE_BEGINNING.value + "$",
+                    pattern="^"
+                    + States.FIND_COMIC_BY_TITLE_BEGINNING.value
+                    + "$",
                 ),
             ],
             States.ASK_FOR_INPUT.value: [
                 MessageHandler(Filters.text & ~Filters.command, save_input),
             ],
             States.LIST_COMICS.value: [
-                CallbackQueryHandler(comics_menu, pattern="^" + States.BACK.value + "$"),
+                CallbackQueryHandler(
+                    comics_menu, pattern="^" + States.BACK.value + "$"
+                ),
                 CallbackQueryHandler(
                     list_comics, pattern="^" + States.NEXT_PAGE.value + "$",
                 ),
                 CallbackQueryHandler(
-                    list_previous_comics, pattern="^" + States.PREV_PAGE.value + "$",
+                    list_previous_comics,
+                    pattern="^" + States.PREV_PAGE.value + "$",
                 ),
                 CallbackQueryHandler(show_comic, pattern="^(?!-1).+$",),
             ],
@@ -1363,14 +1379,19 @@ def main(bot_token, fetcher) -> None:
                 ),
                 CallbackQueryHandler(
                     find_comic_by_title_beginning,
-                    pattern="^" + States.FIND_COMIC_BY_TITLE_BEGINNING.value + "$",
+                    pattern="^"
+                    + States.FIND_COMIC_BY_TITLE_BEGINNING.value
+                    + "$",
                 ),
                 CallbackQueryHandler(
                     list_comics, pattern="^" + States.LIST_COMICS.value + "$"
                 ),
-                CallbackQueryHandler(comics_menu, pattern="^" + States.BACK.value + "$"),
                 CallbackQueryHandler(
-                    find_comic_by_title, pattern="^" + States.NEXT_PAGE.value + "$",
+                    comics_menu, pattern="^" + States.BACK.value + "$"
+                ),
+                CallbackQueryHandler(
+                    find_comic_by_title,
+                    pattern="^" + States.NEXT_PAGE.value + "$",
                 ),
                 CallbackQueryHandler(
                     list_previous_comics_from_title,
@@ -1385,12 +1406,16 @@ def main(bot_token, fetcher) -> None:
                 ),
                 CallbackQueryHandler(
                     find_comic_by_title_beginning,
-                    pattern="^" + States.FIND_COMIC_BY_TITLE_BEGINNING.value + "$",
+                    pattern="^"
+                    + States.FIND_COMIC_BY_TITLE_BEGINNING.value
+                    + "$",
                 ),
                 CallbackQueryHandler(
                     list_comics, pattern="^" + States.LIST_COMICS.value + "$"
                 ),
-                CallbackQueryHandler(comics_menu, pattern="^" + States.BACK.value + "$"),
+                CallbackQueryHandler(
+                    comics_menu, pattern="^" + States.BACK.value + "$"
+                ),
                 CallbackQueryHandler(
                     find_comic_by_title_beginning,
                     pattern="^" + States.NEXT_PAGE.value + "$",
@@ -1408,12 +1433,17 @@ def main(bot_token, fetcher) -> None:
                 end_second_level, pattern="^" + str(States.END.value) + "$"
             ),
         ],
-        map_to_parent={States.END.value: States.MENU.value, States.STOPPING.value: States.END.value,},
+        map_to_parent={
+            States.END.value: States.MENU.value,
+            States.STOPPING.value: States.END.value,
+        },
     )
 
     events_conv = ConversationHandler(
         entry_points=[
-            CallbackQueryHandler(events_menu, pattern="^" + States.EVENTS.value + "$")
+            CallbackQueryHandler(
+                events_menu, pattern="^" + States.EVENTS.value + "$"
+            )
         ],
         states={
             States.EVENTS.value: [
@@ -1421,40 +1451,52 @@ def main(bot_token, fetcher) -> None:
                     list_events, pattern="^" + States.LIST_EVENTS.value + "$",
                 ),
                 CallbackQueryHandler(
-                    find_event_by_name, pattern="^" + States.FIND_EVENT_BY_NAME.value + "$",
+                    find_event_by_name,
+                    pattern="^" + States.FIND_EVENT_BY_NAME.value + "$",
                 ),
                 CallbackQueryHandler(
                     find_event_by_name_beginning,
-                    pattern="^" + States.FIND_EVENT_BY_NAME_BEGINNING.value + "$",
+                    pattern="^"
+                    + States.FIND_EVENT_BY_NAME_BEGINNING.value
+                    + "$",
                 ),
             ],
             States.ASK_FOR_INPUT.value: [
                 MessageHandler(Filters.text & ~Filters.command, save_input),
             ],
             States.LIST_EVENTS.value: [
-                CallbackQueryHandler(events_menu, pattern="^" + States.BACK.value + "$"),
+                CallbackQueryHandler(
+                    events_menu, pattern="^" + States.BACK.value + "$"
+                ),
                 CallbackQueryHandler(
                     list_events, pattern="^" + States.NEXT_PAGE.value + "$",
                 ),
                 CallbackQueryHandler(
-                    list_previous_events, pattern="^" + States.PREV_PAGE.value + "$",
+                    list_previous_events,
+                    pattern="^" + States.PREV_PAGE.value + "$",
                 ),
                 CallbackQueryHandler(show_event, pattern="^(?!-1).+$",),
             ],
             States.FIND_EVENT_BY_NAME.value: [
                 CallbackQueryHandler(
-                    find_event_by_name, pattern="^" + States.FIND_EVENT_BY_NAME.value + "$",
+                    find_event_by_name,
+                    pattern="^" + States.FIND_EVENT_BY_NAME.value + "$",
                 ),
                 CallbackQueryHandler(
                     find_event_by_name_beginning,
-                    pattern="^" + States.FIND_EVENT_BY_NAME_BEGINNING.value + "$",
+                    pattern="^"
+                    + States.FIND_EVENT_BY_NAME_BEGINNING.value
+                    + "$",
                 ),
                 CallbackQueryHandler(
                     list_events, pattern="^" + States.LIST_EVENTS.value + "$"
                 ),
-                CallbackQueryHandler(events_menu, pattern="^" + States.BACK.value + "$"),
                 CallbackQueryHandler(
-                    find_event_by_name, pattern="^" + States.NEXT_PAGE.value + "$",
+                    events_menu, pattern="^" + States.BACK.value + "$"
+                ),
+                CallbackQueryHandler(
+                    find_event_by_name,
+                    pattern="^" + States.NEXT_PAGE.value + "$",
                 ),
                 CallbackQueryHandler(
                     list_previous_events_from_name,
@@ -1464,16 +1506,21 @@ def main(bot_token, fetcher) -> None:
             ],
             States.FIND_EVENT_BY_NAME_BEGINNING.value: [
                 CallbackQueryHandler(
-                    find_event_by_name, pattern="^" + States.FIND_EVENT_BY_NAME.value + "$",
+                    find_event_by_name,
+                    pattern="^" + States.FIND_EVENT_BY_NAME.value + "$",
                 ),
                 CallbackQueryHandler(
                     find_event_by_name_beginning,
-                    pattern="^" + States.FIND_EVENT_BY_NAME_BEGINNING.value + "$",
+                    pattern="^"
+                    + States.FIND_EVENT_BY_NAME_BEGINNING.value
+                    + "$",
                 ),
                 CallbackQueryHandler(
                     list_events, pattern="^" + States.LIST_EVENTS.value + "$"
                 ),
-                CallbackQueryHandler(events_menu, pattern="^" + States.BACK.value + "$"),
+                CallbackQueryHandler(
+                    events_menu, pattern="^" + States.BACK.value + "$"
+                ),
                 CallbackQueryHandler(
                     find_event_by_name_beginning,
                     pattern="^" + States.NEXT_PAGE.value + "$",
@@ -1491,12 +1538,17 @@ def main(bot_token, fetcher) -> None:
                 end_second_level, pattern="^" + str(States.END.value) + "$"
             ),
         ],
-        map_to_parent={States.END.value: States.MENU.value, States.STOPPING.value: States.END.value,},
+        map_to_parent={
+            States.END.value: States.MENU.value,
+            States.STOPPING.value: States.END.value,
+        },
     )
 
     series_conv = ConversationHandler(
         entry_points=[
-            CallbackQueryHandler(series_menu, pattern="^" + States.SERIES.value + "$")
+            CallbackQueryHandler(
+                series_menu, pattern="^" + States.SERIES.value + "$"
+            )
         ],
         states={
             States.SERIES.value: [
@@ -1509,19 +1561,24 @@ def main(bot_token, fetcher) -> None:
                 ),
                 CallbackQueryHandler(
                     find_series_by_title_beginning,
-                    pattern="^" + States.FIND_SERIES_BY_TITLE_BEGINNING.value + "$",
+                    pattern="^"
+                    + States.FIND_SERIES_BY_TITLE_BEGINNING.value
+                    + "$",
                 ),
             ],
             States.ASK_FOR_INPUT.value: [
                 MessageHandler(Filters.text & ~Filters.command, save_input),
             ],
             States.LIST_SERIES.value: [
-                CallbackQueryHandler(series_menu, pattern="^" + States.BACK.value + "$"),
+                CallbackQueryHandler(
+                    series_menu, pattern="^" + States.BACK.value + "$"
+                ),
                 CallbackQueryHandler(
                     list_series, pattern="^" + States.NEXT_PAGE.value + "$",
                 ),
                 CallbackQueryHandler(
-                    list_previous_series, pattern="^" + States.PREV_PAGE.value + "$",
+                    list_previous_series,
+                    pattern="^" + States.PREV_PAGE.value + "$",
                 ),
                 CallbackQueryHandler(show_series, pattern="^(?!-1).+$",),
             ],
@@ -1532,14 +1589,19 @@ def main(bot_token, fetcher) -> None:
                 ),
                 CallbackQueryHandler(
                     find_series_by_title_beginning,
-                    pattern="^" + States.FIND_SERIES_BY_TITLE_BEGINNING.value + "$",
+                    pattern="^"
+                    + States.FIND_SERIES_BY_TITLE_BEGINNING.value
+                    + "$",
                 ),
                 CallbackQueryHandler(
                     list_series, pattern="^" + States.LIST_SERIES.value + "$"
                 ),
-                CallbackQueryHandler(series_menu, pattern="^" + States.BACK.value + "$"),
                 CallbackQueryHandler(
-                    find_series_by_title, pattern="^" + States.NEXT_PAGE.value + "$",
+                    series_menu, pattern="^" + States.BACK.value + "$"
+                ),
+                CallbackQueryHandler(
+                    find_series_by_title,
+                    pattern="^" + States.NEXT_PAGE.value + "$",
                 ),
                 CallbackQueryHandler(
                     list_previous_series_from_title,
@@ -1554,12 +1616,16 @@ def main(bot_token, fetcher) -> None:
                 ),
                 CallbackQueryHandler(
                     find_series_by_title_beginning,
-                    pattern="^" + States.FIND_SERIES_BY_TITLE_BEGINNING.value + "$",
+                    pattern="^"
+                    + States.FIND_SERIES_BY_TITLE_BEGINNING.value
+                    + "$",
                 ),
                 CallbackQueryHandler(
                     list_series, pattern="^" + States.LIST_SERIES.value + "$"
                 ),
-                CallbackQueryHandler(series_menu, pattern="^" + States.BACK.value + "$"),
+                CallbackQueryHandler(
+                    series_menu, pattern="^" + States.BACK.value + "$"
+                ),
                 CallbackQueryHandler(
                     find_series_by_title_beginning,
                     pattern="^" + States.NEXT_PAGE.value + "$",
@@ -1577,7 +1643,10 @@ def main(bot_token, fetcher) -> None:
                 end_second_level, pattern="^" + str(States.END.value) + "$"
             ),
         ],
-        map_to_parent={States.END.value: States.MENU.value, States.STOPPING.value: States.END.value,},
+        map_to_parent={
+            States.END.value: States.MENU.value,
+            States.STOPPING.value: States.END.value,
+        },
     )
 
     menu_handlers = [
@@ -1595,7 +1664,9 @@ def main(bot_token, fetcher) -> None:
         },
         fallbacks=[
             CommandHandler("stop", stop),
-            CallbackQueryHandler(end, pattern="^" + str(States.END.value) + "$"),
+            CallbackQueryHandler(
+                end, pattern="^" + str(States.END.value) + "$"
+            ),
         ],
     )
     dispatcher.add_handler(conv_handler)
