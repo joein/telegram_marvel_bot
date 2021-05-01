@@ -265,6 +265,161 @@ class Text(_Text):
     series_menu = _Text.series_menu()
 
 
+class Display:
+    CALLBACK_DATA_MAX_LENGTH = 64
+
+    @classmethod
+    def send_character(cls, update: Update, context: CallbackContext):
+        character = None
+        for ch in context.user_data["characters"]:
+            if (
+                ch.name[: cls.CALLBACK_DATA_MAX_LENGTH]
+                == update.callback_query.data
+            ):
+                character = ch
+                break
+        if character:
+            ch_name = character.name
+            description = character.description
+            wiki = f"wiki link: {character.wiki['url'].split('?utm')[0]}"
+            detail = f"comics link: {character.detail['url'].split('?utm')[0]}"
+
+            caption = "\n\n".join((ch_name, description, wiki, detail))
+            context.bot.send_photo(
+                update.callback_query.message.chat_id,
+                character.img_link,
+                caption=caption,
+            )
+
+        logger.info(update.callback_query.message)
+        update.callback_query.delete_message()
+        context.user_data["MSG_DELETED"] = True
+
+        return characters_menu(update, context)
+
+    @classmethod
+    def send_comic(cls, update: Update, context: CallbackContext):
+        comic = None
+        for comic_ in context.user_data["comics"]:
+
+            if (
+                comic_.title[: cls.CALLBACK_DATA_MAX_LENGTH]
+                == update.callback_query.data
+            ):
+                comic = comic_
+                break
+
+        if comic:
+            logger.info(
+                f"comic page count {comic.page_count} and type {comic.page_count}"
+            )
+            page_count = f"Page count: {comic.page_count if comic.page_count else 'Unknown'}"
+            detail = f"detail link: {comic.detail['url'].split('?utm')[0]}"
+            caption = "\n\n".join(
+                (
+                    comic.title,
+                    comic.description,
+                    page_count,
+                    detail,
+                    "Creators: "
+                    + "\n".join((str(creator) for creator in comic.creators)),
+                )
+            )
+            context.bot.send_photo(
+                update.callback_query.message.chat_id,
+                comic.img_link,
+                caption=caption,
+            )
+
+        logger.info(update.callback_query.message)
+        update.callback_query.delete_message()
+        context.user_data["MSG_DELETED"] = True
+
+        return comics_menu(update, context)
+
+    @classmethod
+    def send_event(cls, update: Update, context: CallbackContext):
+        event = None
+        for ev in context.user_data["events"]:
+            if (
+                ev.name[: cls.CALLBACK_DATA_MAX_LENGTH]
+                == update.callback_query.data
+            ):
+                event = ev
+                break
+        if event:
+            ev_name = event.name
+            description = event.description
+            wiki = f"Wiki link: {event.wiki['url'].split('?utm')[0]}"
+            detail = f"Comics link: {event.detail['url'].split('?utm')[0]}"
+            next_event = f"Next event: {event.next_event['name']}"
+            previous_event = f"Previous event: {event.previous_event['name']}"
+            caption = "\n\n".join(
+                (
+                    ev_name,
+                    description,
+                    wiki,
+                    detail,
+                    next_event,
+                    previous_event,
+                )
+            )
+            context.bot.send_photo(
+                update.callback_query.message.chat_id,
+                event.img_link,
+                caption=caption,
+            )
+
+        logger.info(update.callback_query.message)
+        update.callback_query.delete_message()
+        context.user_data["MSG_DELETED"] = True
+        return events_menu(update, context)
+
+    @classmethod
+    def send_series(cls, update: Update, context: CallbackContext):
+        single_series = None
+        for single_series_ in context.user_data["series"]:
+
+            if (
+                single_series_.title[: cls.CALLBACK_DATA_MAX_LENGTH]
+                == update.callback_query.data
+            ):
+                single_series = single_series_
+                break
+
+        if single_series:
+            detail = f"detail link: {single_series.detail['url'].split('?utm')[0] if single_series.detail else ''}"
+            next_series = f"Next series are: {single_series.next_series['name'] if single_series.next_series else ''}"
+            previous_series = f"Previous series are: {single_series.previous_series['name'] if single_series.previous_series else ''}"
+
+            caption = "\n\n".join(
+                (
+                    single_series.title,
+                    single_series.description,
+                    detail,
+                    f"Start in: {single_series.start_year}",
+                    f"Ends in: {single_series.end_year}",
+                    next_series,
+                    previous_series,
+                    "Creators: "
+                    + "\n".join(
+                        (str(creator) for creator in single_series.creators)
+                    ),
+                )
+            )
+            context.bot.send_photo(
+                update.callback_query.message.chat_id,
+                single_series.img_link,
+                caption=caption,
+            )
+
+        logger.info(update.callback_query.message)
+        update.callback_query.delete_message()
+        context.user_data["MSG_DELETED"] = True
+
+        return series_menu(update, context)
+
+
 def start(update: Update, context: CallbackContext):
     logger.info("start")
     text = Text.menu
@@ -404,17 +559,6 @@ def series_menu(update: Update, context: CallbackContext) -> str:
     return States.SERIES.value
 
 
-def stop(update: Update, _: CallbackContext):
-    update.message.reply_text(Text.stop)
-    return States.END.value
-
-
-def end(update: Update, _: CallbackContext):
-    update.callback_query.answer()
-    update.callback_query.edit_message_text(text=Text.end)
-    return States.END.value
-
-
 def list_characters(update: Update, context: CallbackContext):
     logger.info("List characters command")
     limit = 10
@@ -441,138 +585,6 @@ def list_characters(update: Update, context: CallbackContext):
         limit, fetched_data["count"]
     )
     return States.LIST_CHARACTERS.value
-
-
-def show_character(update: Update, context: CallbackContext):
-    character = None
-    for ch in context.user_data["characters"]:
-        if ch.name == update.callback_query.data:
-            character = ch
-            break
-    if character:
-        ch_name = character.name
-        description = character.description
-        wiki = f"wiki link: {character.wiki['url'].split('?utm')[0]}"
-        detail = f"comics link: {character.detail['url'].split('?utm')[0]}"
-
-        caption = "\n\n".join((ch_name, description, wiki, detail))
-        context.bot.send_photo(
-            update.callback_query.message.chat_id,
-            character.img_link,
-            caption=caption,
-        )
-
-    logger.info(update.callback_query.message)
-    update.callback_query.delete_message()
-    context.user_data["MSG_DELETED"] = True
-
-    return characters_menu(update, context)
-
-
-def show_comic(update: Update, context: CallbackContext):
-    comic = None
-    for comic_ in context.user_data["comics"]:
-
-        if comic_.title[:64] == update.callback_query.data:
-            comic = comic_
-            break
-
-    if comic:
-        logger.info(
-            f"comic page count {comic.page_count} and type {comic.page_count}"
-        )
-        page_count = f"Page count: {comic.page_count if comic.page_count else 'Unknown'}"
-        detail = f"detail link: {comic.detail['url'].split('?utm')[0]}"
-        caption = "\n\n".join(
-            (
-                comic.title,
-                comic.description,
-                page_count,
-                detail,
-                "Creators: "
-                + "\n".join((str(creator) for creator in comic.creators)),
-            )
-        )
-        context.bot.send_photo(
-            update.callback_query.message.chat_id,
-            comic.img_link,
-            caption=caption,
-        )
-
-    logger.info(update.callback_query.message)
-    update.callback_query.delete_message()
-    context.user_data["MSG_DELETED"] = True
-
-    return comics_menu(update, context)
-
-
-def show_event(update: Update, context: CallbackContext):
-    event = None
-    for ev in context.user_data["events"]:
-        if ev.name[:64] == update.callback_query.data:
-            event = ev
-            break
-    if event:
-        ev_name = event.name
-        description = event.description
-        wiki = f"Wiki link: {event.wiki['url'].split('?utm')[0]}"
-        detail = f"Comics link: {event.detail['url'].split('?utm')[0]}"
-        next_event = f"Next event: {event.next_event['name']}"
-        previous_event = f"Previous event: {event.previous_event['name']}"
-        caption = "\n\n".join(
-            (ev_name, description, wiki, detail, next_event, previous_event)
-        )
-        context.bot.send_photo(
-            update.callback_query.message.chat_id,
-            event.img_link,
-            caption=caption,
-        )
-
-    logger.info(update.callback_query.message)
-    update.callback_query.delete_message()
-    context.user_data["MSG_DELETED"] = True
-    return events_menu(update, context)
-
-
-def show_series(update: Update, context: CallbackContext):
-    single_series = None
-    for single_series_ in context.user_data["series"]:
-
-        if single_series_.title[:64] == update.callback_query.data:
-            single_series = single_series_
-            break
-
-    if single_series:
-        detail = f"detail link: {single_series.detail['url'].split('?utm')[0] if single_series.detail else ''}"
-        next_series = f"Next series are: {single_series.next_series['name'] if single_series.next_series else ''}"
-        previous_series = f"Previous series are: {single_series.previous_series['name'] if single_series.previous_series else ''}"
-
-        caption = "\n\n".join(
-            (
-                single_series.title,
-                single_series.description,
-                detail,
-                f"Start in: {single_series.start_year}",
-                f"Ends in: {single_series.end_year}",
-                next_series,
-                previous_series,
-                "Creators: "
-                + "\n".join(
-                    (str(creator) for creator in single_series.creators)
-                ),
-            )
-        )
-        context.bot.send_photo(
-            update.callback_query.message.chat_id,
-            single_series.img_link,
-            caption=caption,
-        )
-
-    logger.info(update.callback_query.message)
-    update.callback_query.delete_message()
-    context.user_data["MSG_DELETED"] = True
-
-    return series_menu(update, context)
 
 
 def list_previous_characters(update: Update, context: CallbackContext):
@@ -1229,6 +1241,17 @@ def end_second_level(update: Update, context: CallbackContext):
     return States.END.value
 
 
+def stop(update: Update, _: CallbackContext):
+    update.message.reply_text(Text.stop)
+    return States.END.value
+
+
+def end(update: Update, _: CallbackContext):
+    update.callback_query.answer()
+    update.callback_query.edit_message_text(text=Text.end)
+    return States.END.value
+
+
 def main(bot_token, fetcher) -> None:
     updater = Updater(bot_token)
     dispatcher = updater.dispatcher
@@ -1272,7 +1295,7 @@ def main(bot_token, fetcher) -> None:
                     list_previous_characters,
                     pattern="^" + States.PREV_PAGE.value + "$",
                 ),
-                CallbackQueryHandler(show_character, pattern="^(?!-1).+$",),
+                CallbackQueryHandler(Display.send_character, pattern="^(?!-1).+$",),
             ],
             States.FIND_CHARACTER_BY_NAME.value: [
                 CallbackQueryHandler(
@@ -1319,7 +1342,7 @@ def main(bot_token, fetcher) -> None:
                     list_previous_characters_from_name_beginning,
                     pattern="^" + States.PREV_PAGE.value + "$",
                 ),
-                CallbackQueryHandler(show_character, pattern="^(?!-1).+$",),
+                CallbackQueryHandler(Display.send_character, pattern="^(?!-1).+$",),
             ],
         },
         fallbacks=[
@@ -1370,7 +1393,7 @@ def main(bot_token, fetcher) -> None:
                     list_previous_comics,
                     pattern="^" + States.PREV_PAGE.value + "$",
                 ),
-                CallbackQueryHandler(show_comic, pattern="^(?!-1).+$",),
+                CallbackQueryHandler(Display.send_comic, pattern="^(?!-1).+$",),
             ],
             States.FIND_COMIC_BY_TITLE.value: [
                 CallbackQueryHandler(
@@ -1397,7 +1420,7 @@ def main(bot_token, fetcher) -> None:
                     list_previous_comics_from_title,
                     pattern="^" + States.PREV_PAGE.value + "$",
                 ),
-                CallbackQueryHandler(show_comic, pattern="^(?!-1).+$",),
+                CallbackQueryHandler(Display.send_comic, pattern="^(?!-1).+$",),
             ],
             States.FIND_COMIC_BY_TITLE_BEGINNING.value: [
                 CallbackQueryHandler(
@@ -1424,7 +1447,7 @@ def main(bot_token, fetcher) -> None:
                     list_previous_comics_from_title_beginning,
                     pattern="^" + States.PREV_PAGE.value + "$",
                 ),
-                CallbackQueryHandler(show_comic, pattern="^(?!-1).+$",),
+                CallbackQueryHandler(Display.send_comic, pattern="^(?!-1).+$",),
             ],
         },
         fallbacks=[
@@ -1475,7 +1498,7 @@ def main(bot_token, fetcher) -> None:
                     list_previous_events,
                     pattern="^" + States.PREV_PAGE.value + "$",
                 ),
-                CallbackQueryHandler(show_event, pattern="^(?!-1).+$",),
+                CallbackQueryHandler(Display.send_event, pattern="^(?!-1).+$",),
             ],
             States.FIND_EVENT_BY_NAME.value: [
                 CallbackQueryHandler(
@@ -1502,7 +1525,7 @@ def main(bot_token, fetcher) -> None:
                     list_previous_events_from_name,
                     pattern="^" + States.PREV_PAGE.value + "$",
                 ),
-                CallbackQueryHandler(show_event, pattern="^(?!-1).+$",),
+                CallbackQueryHandler(Display.send_event, pattern="^(?!-1).+$",),
             ],
             States.FIND_EVENT_BY_NAME_BEGINNING.value: [
                 CallbackQueryHandler(
@@ -1529,7 +1552,7 @@ def main(bot_token, fetcher) -> None:
                     list_previous_events_from_name_beginning,
                     pattern="^" + States.PREV_PAGE.value + "$",
                 ),
-                CallbackQueryHandler(show_event, pattern="^(?!-1).+$",),
+                CallbackQueryHandler(Display.send_event, pattern="^(?!-1).+$",),
             ],
         },
         fallbacks=[
@@ -1580,7 +1603,7 @@ def main(bot_token, fetcher) -> None:
                     list_previous_series,
                     pattern="^" + States.PREV_PAGE.value + "$",
                 ),
-                CallbackQueryHandler(show_series, pattern="^(?!-1).+$",),
+                CallbackQueryHandler(Display.send_series, pattern="^(?!-1).+$",),
             ],
             States.FIND_SERIES_BY_TITLE.value: [
                 CallbackQueryHandler(
@@ -1607,7 +1630,7 @@ def main(bot_token, fetcher) -> None:
                     list_previous_series_from_title,
                     pattern="^" + States.PREV_PAGE.value + "$",
                 ),
-                CallbackQueryHandler(show_series, pattern="^(?!-1).+$",),
+                CallbackQueryHandler(Display.send_series, pattern="^(?!-1).+$",),
             ],
             States.FIND_SERIES_BY_TITLE_BEGINNING.value: [
                 CallbackQueryHandler(
@@ -1634,7 +1657,7 @@ def main(bot_token, fetcher) -> None:
                     list_previous_series_from_title_beginning,
                     pattern="^" + States.PREV_PAGE.value + "$",
                 ),
-                CallbackQueryHandler(show_series, pattern="^(?!-1).+$",),
+                CallbackQueryHandler(Display.send_series, pattern="^(?!-1).+$",),
             ],
         },
         fallbacks=[
