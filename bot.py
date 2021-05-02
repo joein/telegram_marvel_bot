@@ -56,6 +56,7 @@ class States(enum.Enum):
 
 
 START_OVER = "START_OVER"
+MSG_DELETED = "MSG_DELETED"
 
 
 class _CustomKeyboard:
@@ -269,22 +270,90 @@ class Display:
     CALLBACK_DATA_MAX_LENGTH = 64
 
     @classmethod
-    def send_character(cls, update: Update, context: CallbackContext):
-        character = None
-        for ch in context.user_data["characters"]:
-            if (
-                ch.name[: cls.CALLBACK_DATA_MAX_LENGTH]
-                == update.callback_query.data
-            ):
-                character = ch
-                break
-        if character:
-            ch_name = character.name
-            description = character.description
-            wiki = f"wiki link: {character.wiki['url'].split('?utm')[0]}"
-            detail = f"comics link: {character.detail['url'].split('?utm')[0]}"
+    def character_content(cls, character):
+        ch_name = character.name
+        description = character.description
+        wiki = f"wiki link: {character.wiki['url'].split('?utm')[0]}"
+        detail = f"comics link: {character.detail['url'].split('?utm')[0]}"
+        caption = "\n\n".join((ch_name, description, wiki, detail))
+        return caption
 
-            caption = "\n\n".join((ch_name, description, wiki, detail))
+    @classmethod
+    def comic_content(cls, comic):
+        page_count = f"Page count: {comic.page_count if comic.page_count else 'Unknown'}"
+        detail = f"detail link: {comic.detail['url'].split('?utm')[0]}"
+        caption = "\n\n".join(
+            (
+                comic.title,
+                comic.description,
+                page_count,
+                detail,
+                "Creators: "
+                + "\n".join((str(creator) for creator in comic.creators)),
+            )
+        )
+        return caption
+
+    @classmethod
+    def event_content(cls, event):
+        ev_name = event.name
+        description = event.description
+        wiki = f"Wiki link: {event.wiki['url'].split('?utm')[0]}"
+        detail = f"Comics link: {event.detail['url'].split('?utm')[0]}"
+        next_event = f"Next event: {event.next_event['name']}"
+        previous_event = f"Previous event: {event.previous_event['name']}"
+        caption = "\n\n".join(
+            (
+                ev_name,
+                description,
+                wiki,
+                detail,
+                next_event,
+                previous_event,
+            )
+        )
+        return caption
+
+    @classmethod
+    def series_content(cls, single_series):
+        detail = f"detail link: {single_series.detail['url'].split('?utm')[0] if single_series.detail else ''}"
+        next_series = f"Next series are: {single_series.next_series['name'] if single_series.next_series else ''}"
+        previous_series = f"Previous series are: {single_series.previous_series['name'] if single_series.previous_series else ''}"
+
+        caption = "\n\n".join(
+            (
+                single_series.title,
+                single_series.description,
+                detail,
+                f"Start in: {single_series.start_year}",
+                f"Ends in: {single_series.end_year}",
+                next_series,
+                previous_series,
+                "Creators: "
+                + "\n".join(
+                    (str(creator) for creator in single_series.creators)
+                ),
+            )
+        )
+        return caption
+
+    @classmethod
+    def extract_feature(cls, update, context, feature_name):
+        feature = None
+        for feature_ in context.user_data[feature_name]:
+            if (
+                    feature_.name[: cls.CALLBACK_DATA_MAX_LENGTH]
+                    == update.callback_query.data
+            ):
+                feature = feature_
+                break
+        return feature
+
+    @classmethod
+    def send_character(cls, update: Update, context: CallbackContext):
+        character = cls.extract_feature(update, context, "characters")
+        if character:
+            caption = cls.character_content(character)
             context.bot.send_photo(
                 update.callback_query.message.chat_id,
                 character.img_link,
@@ -293,38 +362,18 @@ class Display:
 
         logger.info(update.callback_query.message)
         update.callback_query.delete_message()
-        context.user_data["MSG_DELETED"] = True
-
+        context.user_data[MSG_DELETED] = True
         return characters_menu(update, context)
 
     @classmethod
     def send_comic(cls, update: Update, context: CallbackContext):
-        comic = None
-        for comic_ in context.user_data["comics"]:
-
-            if (
-                comic_.title[: cls.CALLBACK_DATA_MAX_LENGTH]
-                == update.callback_query.data
-            ):
-                comic = comic_
-                break
+        comic = cls.extract_feature(update, context, "comics")
 
         if comic:
             logger.info(
                 f"comic page count {comic.page_count} and type {comic.page_count}"
             )
-            page_count = f"Page count: {comic.page_count if comic.page_count else 'Unknown'}"
-            detail = f"detail link: {comic.detail['url'].split('?utm')[0]}"
-            caption = "\n\n".join(
-                (
-                    comic.title,
-                    comic.description,
-                    page_count,
-                    detail,
-                    "Creators: "
-                    + "\n".join((str(creator) for creator in comic.creators)),
-                )
-            )
+            caption = cls.comic_content(comic)
             context.bot.send_photo(
                 update.callback_query.message.chat_id,
                 comic.img_link,
@@ -333,37 +382,15 @@ class Display:
 
         logger.info(update.callback_query.message)
         update.callback_query.delete_message()
-        context.user_data["MSG_DELETED"] = True
+        context.user_data[MSG_DELETED] = True
 
         return comics_menu(update, context)
 
     @classmethod
     def send_event(cls, update: Update, context: CallbackContext):
-        event = None
-        for ev in context.user_data["events"]:
-            if (
-                ev.name[: cls.CALLBACK_DATA_MAX_LENGTH]
-                == update.callback_query.data
-            ):
-                event = ev
-                break
+        event = cls.extract_feature(update, context, "events")
         if event:
-            ev_name = event.name
-            description = event.description
-            wiki = f"Wiki link: {event.wiki['url'].split('?utm')[0]}"
-            detail = f"Comics link: {event.detail['url'].split('?utm')[0]}"
-            next_event = f"Next event: {event.next_event['name']}"
-            previous_event = f"Previous event: {event.previous_event['name']}"
-            caption = "\n\n".join(
-                (
-                    ev_name,
-                    description,
-                    wiki,
-                    detail,
-                    next_event,
-                    previous_event,
-                )
-            )
+            caption = cls.event_content(event)
             context.bot.send_photo(
                 update.callback_query.message.chat_id,
                 event.img_link,
@@ -372,41 +399,15 @@ class Display:
 
         logger.info(update.callback_query.message)
         update.callback_query.delete_message()
-        context.user_data["MSG_DELETED"] = True
+        context.user_data[MSG_DELETED] = True
         return events_menu(update, context)
 
     @classmethod
     def send_series(cls, update: Update, context: CallbackContext):
-        single_series = None
-        for single_series_ in context.user_data["series"]:
-
-            if (
-                single_series_.title[: cls.CALLBACK_DATA_MAX_LENGTH]
-                == update.callback_query.data
-            ):
-                single_series = single_series_
-                break
+        single_series = cls.extract_feature(update, context, "series")
 
         if single_series:
-            detail = f"detail link: {single_series.detail['url'].split('?utm')[0] if single_series.detail else ''}"
-            next_series = f"Next series are: {single_series.next_series['name'] if single_series.next_series else ''}"
-            previous_series = f"Previous series are: {single_series.previous_series['name'] if single_series.previous_series else ''}"
-
-            caption = "\n\n".join(
-                (
-                    single_series.title,
-                    single_series.description,
-                    detail,
-                    f"Start in: {single_series.start_year}",
-                    f"Ends in: {single_series.end_year}",
-                    next_series,
-                    previous_series,
-                    "Creators: "
-                    + "\n".join(
-                        (str(creator) for creator in single_series.creators)
-                    ),
-                )
-            )
+            caption = cls.series_content(single_series)
             context.bot.send_photo(
                 update.callback_query.message.chat_id,
                 single_series.img_link,
@@ -415,7 +416,7 @@ class Display:
 
         logger.info(update.callback_query.message)
         update.callback_query.delete_message()
-        context.user_data["MSG_DELETED"] = True
+        context.user_data[MSG_DELETED] = True
 
         return series_menu(update, context)
 
@@ -449,9 +450,9 @@ def characters_menu(update: Update, context: CallbackContext) -> str:
     keyboard = CustomKeyboard.characters_menu
 
     logger.info("characters")
-    if context.user_data.get("MSG_DELETED"):
-        del context.user_data["MSG_DELETED"]
-        logger.info(context.user_data.get("MSG_DELETED"))
+    if context.user_data.get(MSG_DELETED):
+        del context.user_data[MSG_DELETED]
+        logger.info(context.user_data.get(MSG_DELETED))
         context.bot.send_message(
             update.callback_query.message.chat_id,
             text=text,
@@ -479,9 +480,9 @@ def comics_menu(update: Update, context: CallbackContext) -> str:
     keyboard = CustomKeyboard.comics_menu
 
     logger.info("comics")
-    if context.user_data.get("MSG_DELETED"):
-        del context.user_data["MSG_DELETED"]
-        logger.info(context.user_data.get("MSG_DELETED"))
+    if context.user_data.get(MSG_DELETED):
+        del context.user_data[MSG_DELETED]
+        logger.info(context.user_data.get(MSG_DELETED))
         context.bot.send_message(
             update.callback_query.message.chat_id,
             text=text,
@@ -509,9 +510,9 @@ def events_menu(update: Update, context: CallbackContext) -> str:
     keyboard = CustomKeyboard.events_menu
 
     logger.info("events")
-    if context.user_data.get("MSG_DELETED"):
-        del context.user_data["MSG_DELETED"]
-        logger.info(context.user_data.get("MSG_DELETED"))
+    if context.user_data.get(MSG_DELETED):
+        del context.user_data[MSG_DELETED]
+        logger.info(context.user_data.get(MSG_DELETED))
         context.bot.send_message(
             update.callback_query.message.chat_id,
             text=text,
@@ -539,9 +540,9 @@ def series_menu(update: Update, context: CallbackContext) -> str:
     keyboard = CustomKeyboard.series_menu
 
     logger.info("series")
-    if context.user_data.get("MSG_DELETED"):
-        del context.user_data["MSG_DELETED"]
-        logger.info(context.user_data.get("MSG_DELETED"))
+    if context.user_data.get(MSG_DELETED):
+        del context.user_data[MSG_DELETED]
+        logger.info(context.user_data.get(MSG_DELETED))
         context.bot.send_message(
             update.callback_query.message.chat_id,
             text=text,
