@@ -19,12 +19,15 @@ from telegram.ext import (
 from config import Config
 from fetcher import Fetcher, Route
 
-# Enable logging
+
+START_OVER = "START_OVER"
+MSG_DELETED = "MSG_DELETED"
+OFFSET = "OFFSET"
+
 logging.basicConfig(
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
     level=logging.INFO,
 )
-
 logger = logging.getLogger(__name__)
 
 
@@ -53,10 +56,6 @@ class States(enum.Enum):
     FIND_SERIES_BY_TITLE = "FIND_SERIES_BY_TITLE"
     FIND_SERIES_BY_TITLE_BEGINNING = "FIND_SERIES_BY_TITLE_BEGINNING"
     END = str(ConversationHandler.END)
-
-
-START_OVER = "START_OVER"
-MSG_DELETED = "MSG_DELETED"
 
 
 class _CustomKeyboard:
@@ -202,7 +201,7 @@ class _CustomKeyboard:
 class CustomKeyboard(_CustomKeyboard):
     main_menu = _CustomKeyboard.main_menu()
     characters_menu = _CustomKeyboard.characters_menu()
-    comics_menu = _CustomKeyboard.characters_menu()
+    comics_menu = _CustomKeyboard.comics_menu()
     events_menu = _CustomKeyboard.events_menu()
     series_menu = _CustomKeyboard.series_menu()
 
@@ -268,6 +267,19 @@ class Text(_Text):
 
 class Display:
     CALLBACK_DATA_MAX_LENGTH = 64
+    CAPTION_MAX_LENGTH = 1024
+
+    @classmethod
+    def extract_feature(cls, update, context, feature_name):
+        feature = None
+        for feature_ in context.user_data[feature_name]:
+            field_name = "name" if hasattr(feature, 'name') else "title"
+            value = getattr(feature_, field_name)
+            length_limited_value = value[: cls.CALLBACK_DATA_MAX_LENGTH]
+            if length_limited_value == update.callback_query.data:
+                feature = feature_
+                break
+        return feature
 
     @classmethod
     def character_content(cls, character):
@@ -276,7 +288,7 @@ class Display:
         wiki = f"wiki link: {character.wiki['url'].split('?utm')[0]}"
         detail = f"comics link: {character.detail['url'].split('?utm')[0]}"
         caption = "\n\n".join((ch_name, description, wiki, detail))
-        return caption
+        return caption[:cls.CAPTION_MAX_LENGTH]
 
     @classmethod
     def comic_content(cls, comic):
@@ -292,7 +304,7 @@ class Display:
                 + "\n".join((str(creator) for creator in comic.creators)),
             )
         )
-        return caption
+        return caption[:cls.CAPTION_MAX_LENGTH]
 
     @classmethod
     def event_content(cls, event):
@@ -303,16 +315,9 @@ class Display:
         next_event = f"Next event: {event.next_event['name']}"
         previous_event = f"Previous event: {event.previous_event['name']}"
         caption = "\n\n".join(
-            (
-                ev_name,
-                description,
-                wiki,
-                detail,
-                next_event,
-                previous_event,
-            )
+            (ev_name, description, wiki, detail, next_event, previous_event,)
         )
-        return caption
+        return caption[:cls.CAPTION_MAX_LENGTH]
 
     @classmethod
     def series_content(cls, single_series):
@@ -328,101 +333,49 @@ class Display:
                 f"Start in: {single_series.start_year}",
                 f"Ends in: {single_series.end_year}",
                 next_series,
-                previous_series,
-                "Creators: "
-                + "\n".join(
-                    (str(creator) for creator in single_series.creators)
-                ),
+                previous_series
             )
         )
-        return caption
+        return caption[:cls.CAPTION_MAX_LENGTH]
 
     @classmethod
-    def extract_feature(cls, update, context, feature_name):
-        feature = None
-        for feature_ in context.user_data[feature_name]:
-            if (
-                    feature_.name[: cls.CALLBACK_DATA_MAX_LENGTH]
-                    == update.callback_query.data
-            ):
-                feature = feature_
-                break
-        return feature
+    def send_feature(cls, update, context, feature_name, content_extractor):
+        context.bot_data[OFFSET] = 0
 
-    @classmethod
-    def send_character(cls, update: Update, context: CallbackContext):
-        character = cls.extract_feature(update, context, "characters")
-        if character:
-            caption = cls.character_content(character)
+        feature = cls.extract_feature(update, context, feature_name)
+        if feature:
+            caption = content_extractor(feature)
             context.bot.send_photo(
                 update.callback_query.message.chat_id,
-                character.img_link,
+                feature.img_link,
                 caption=caption,
             )
 
-        logger.info(update.callback_query.message)
         update.callback_query.delete_message()
         context.user_data[MSG_DELETED] = True
+
+    @classmethod
+    def send_character(cls, update: Update, context: CallbackContext):
+        cls.send_feature(update, context, "characters", cls.character_content)
         return characters_menu(update, context)
 
     @classmethod
     def send_comic(cls, update: Update, context: CallbackContext):
-        comic = cls.extract_feature(update, context, "comics")
-
-        if comic:
-            logger.info(
-                f"comic page count {comic.page_count} and type {comic.page_count}"
-            )
-            caption = cls.comic_content(comic)
-            context.bot.send_photo(
-                update.callback_query.message.chat_id,
-                comic.img_link,
-                caption=caption,
-            )
-
-        logger.info(update.callback_query.message)
-        update.callback_query.delete_message()
-        context.user_data[MSG_DELETED] = True
-
+        cls.send_feature(update, context, "comics", cls.comic_content)
         return comics_menu(update, context)
 
     @classmethod
     def send_event(cls, update: Update, context: CallbackContext):
-        event = cls.extract_feature(update, context, "events")
-        if event:
-            caption = cls.event_content(event)
-            context.bot.send_photo(
-                update.callback_query.message.chat_id,
-                event.img_link,
-                caption=caption,
-            )
-
-        logger.info(update.callback_query.message)
-        update.callback_query.delete_message()
-        context.user_data[MSG_DELETED] = True
+        cls.send_feature(update, context, "events", cls.event_content)
         return events_menu(update, context)
 
     @classmethod
     def send_series(cls, update: Update, context: CallbackContext):
-        single_series = cls.extract_feature(update, context, "series")
-
-        if single_series:
-            caption = cls.series_content(single_series)
-            context.bot.send_photo(
-                update.callback_query.message.chat_id,
-                single_series.img_link,
-                caption=caption,
-            )
-
-        logger.info(update.callback_query.message)
-        update.callback_query.delete_message()
-        context.user_data[MSG_DELETED] = True
-
+        cls.send_feature(update, context, "series", cls.series_content)
         return series_menu(update, context)
 
 
 def start(update: Update, context: CallbackContext):
-    logger.info("start")
     text = Text.menu
 
     if context.user_data.get(START_OVER):
@@ -436,23 +389,18 @@ def start(update: Update, context: CallbackContext):
             text=text, reply_markup=CustomKeyboard.main_menu
         )
     context.user_data[START_OVER] = False
-    logger.info("returning menu")
     return States.MENU.value
 
 
-def characters_menu(update: Update, context: CallbackContext) -> str:
+def _inner_menu(update: Update, context: CallbackContext, text, keyboard):
+    context.bot_data[OFFSET] = 0
+
     if "data" in context.user_data:
         del context.user_data["data"]
 
-    context.bot_data["list_characters_offset"] = 0
-
-    text = Text.characters_menu
-    keyboard = CustomKeyboard.characters_menu
-
-    logger.info("characters")
     if context.user_data.get(MSG_DELETED):
         del context.user_data[MSG_DELETED]
-        logger.info(context.user_data.get(MSG_DELETED))
+
         context.bot.send_message(
             update.callback_query.message.chat_id,
             text=text,
@@ -460,103 +408,35 @@ def characters_menu(update: Update, context: CallbackContext) -> str:
         )
     else:
         update.callback_query.answer()
-        logger.info(
-            f"update callbackquery mesage text {update.callback_query.message.text}"
-        )
         update.callback_query.edit_message_text(
             text=text, reply_markup=keyboard
         )
-    logger.info("returning characters")
+
+def characters_menu(update: Update, context: CallbackContext) -> str:
+    text = Text.characters_menu
+    keyboard = CustomKeyboard.characters_menu
+    _inner_menu(update, context, text, keyboard)
     return States.CHARACTERS.value
 
 
 def comics_menu(update: Update, context: CallbackContext) -> str:
-    if "data" in context.user_data:
-        del context.user_data["data"]
-
-    context.bot_data["list_comics_offset"] = 0
-
     text = Text.comics_menu
     keyboard = CustomKeyboard.comics_menu
-
-    logger.info("comics")
-    if context.user_data.get(MSG_DELETED):
-        del context.user_data[MSG_DELETED]
-        logger.info(context.user_data.get(MSG_DELETED))
-        context.bot.send_message(
-            update.callback_query.message.chat_id,
-            text=text,
-            reply_markup=keyboard,
-        )
-    else:
-        update.callback_query.answer()
-        logger.info(
-            f"update callbackquery message text {update.callback_query.message.text}"
-        )
-        update.callback_query.edit_message_text(
-            text=text, reply_markup=keyboard
-        )
-    logger.info("returning comics")
+    _inner_menu(update, context, text, keyboard)
     return States.COMICS.value
 
 
 def events_menu(update: Update, context: CallbackContext) -> str:
-    if "data" in context.user_data:
-        del context.user_data["data"]
-
-    context.bot_data["list_events_offset"] = 0
-
     text = Text.events_menu
     keyboard = CustomKeyboard.events_menu
-
-    logger.info("events")
-    if context.user_data.get(MSG_DELETED):
-        del context.user_data[MSG_DELETED]
-        logger.info(context.user_data.get(MSG_DELETED))
-        context.bot.send_message(
-            update.callback_query.message.chat_id,
-            text=text,
-            reply_markup=keyboard,
-        )
-    else:
-        update.callback_query.answer()
-        logger.info(
-            f"update callbackquery message text {update.callback_query.message.text}"
-        )
-        update.callback_query.edit_message_text(
-            text=text, reply_markup=keyboard
-        )
-    logger.info("returning comics")
+    _inner_menu(update, context, text, keyboard)
     return States.EVENTS.value
 
 
 def series_menu(update: Update, context: CallbackContext) -> str:
-    if "data" in context.user_data:
-        del context.user_data["data"]
-
-    context.bot_data["list_series_offset"] = 0
-
     text = Text.series_menu
     keyboard = CustomKeyboard.series_menu
-
-    logger.info("series")
-    if context.user_data.get(MSG_DELETED):
-        del context.user_data[MSG_DELETED]
-        logger.info(context.user_data.get(MSG_DELETED))
-        context.bot.send_message(
-            update.callback_query.message.chat_id,
-            text=text,
-            reply_markup=keyboard,
-        )
-    else:
-        update.callback_query.answer()
-        logger.info(
-            f"update callbackquery message text {update.callback_query.message.text}"
-        )
-        update.callback_query.edit_message_text(
-            text=text, reply_markup=keyboard
-        )
-    logger.info("returning series")
+    _inner_menu(update, context, text, keyboard)
     return States.SERIES.value
 
 
@@ -564,7 +444,7 @@ def list_characters(update: Update, context: CallbackContext):
     logger.info("List characters command")
     limit = 10
     fetcher = context.bot_data["fetcher"]
-    offset = context.bot_data.get("list_characters_offset", 0)
+    offset = context.bot_data.get(OFFSET, 0)
     fetched_data = fetcher.list_features(
         Route.CHARACTERS, limit=limit, offset=offset
     )
@@ -582,7 +462,7 @@ def list_characters(update: Update, context: CallbackContext):
     update.callback_query.edit_message_text(
         text=Text.from_container(sorted_characters), reply_markup=keyboard
     )
-    context.bot_data["list_characters_offset"] = offset + min(
+    context.bot_data[OFFSET] = offset + min(
         limit, fetched_data["count"]
     )
     return States.LIST_CHARACTERS.value
@@ -590,10 +470,10 @@ def list_characters(update: Update, context: CallbackContext):
 
 def list_previous_characters(update: Update, context: CallbackContext):
     limit = 10
-    current_offset = context.bot_data["list_characters_offset"]
+    current_offset = context.bot_data[OFFSET]
     subtract_value = limit + (current_offset % 10 or limit)
 
-    context.bot_data["list_characters_offset"] -= subtract_value
+    context.bot_data[OFFSET] -= subtract_value
     return list_characters(update, context)
 
 
@@ -601,10 +481,10 @@ def list_previous_characters_from_name_beginning(
     update: Update, context: CallbackContext
 ):
     limit = 10
-    current_offset = context.bot_data["list_characters_offset"]
+    current_offset = context.bot_data[OFFSET]
     subtract_value = limit + (current_offset % 10 or limit)
 
-    context.bot_data["list_characters_offset"] -= subtract_value
+    context.bot_data[OFFSET] -= subtract_value
     return find_character_by_name_beginning(update, context)
 
 
@@ -620,13 +500,8 @@ def find_character_by_name(update: Update, context: CallbackContext):
 
         if characters:
             ch = characters[0]
-            ch_name = ch.name
-            description = ch.description
-            wiki = f"wiki link: {ch.wiki['url'].split('?utm')[0]}"
-            detail = f"comics link {ch.detail['url'].split('?utm')[0]}"
-
-            caption = "\n\n".join((ch_name, description, wiki, detail))
-            update.message.reply_photo(ch.img_link, caption=caption)
+            content = Display.character_content(ch)
+            update.message.reply_photo(ch.img_link, caption=content)
         else:
             text = Text.not_found_by_name(name)
             update.message.reply_text(text=text)
@@ -649,7 +524,7 @@ def find_character_by_name_beginning(update: Update, context: CallbackContext):
     if (name_beginning := context.user_data.get("data")) :
         logger.info(f"name beginning is {name_beginning}")
         limit = 10
-        offset = context.bot_data.get("list_characters_offset", 0)
+        offset = context.bot_data.get(OFFSET, 0)
 
         fetcher = context.bot_data["fetcher"]
         fetched_data = fetcher.list_features(
@@ -671,7 +546,7 @@ def find_character_by_name_beginning(update: Update, context: CallbackContext):
             sorted_characters, bool(offset), has_more_pages
         )
 
-        context.bot_data["list_characters_offset"] = offset + min(
+        context.bot_data[OFFSET] = offset + min(
             limit, fetched_data["count"]
         )
 
@@ -700,7 +575,7 @@ def list_comics(update: Update, context: CallbackContext):
     logger.info("List comics command")
     limit = 10
     fetcher = context.bot_data["fetcher"]
-    offset = context.bot_data.get("list_comics_offset", 0)
+    offset = context.bot_data.get(OFFSET, 0)
     fetched_data = fetcher.list_features(
         Route.COMICS, limit=limit, offset=offset
     )
@@ -719,7 +594,7 @@ def list_comics(update: Update, context: CallbackContext):
     update.callback_query.edit_message_text(
         text=Text.from_container(sorted_comics), reply_markup=keyboard
     )
-    context.bot_data["list_comics_offset"] = offset + min(
+    context.bot_data[OFFSET] = offset + min(
         limit, fetched_data["count"]
     )
     return States.LIST_COMICS.value
@@ -727,10 +602,10 @@ def list_comics(update: Update, context: CallbackContext):
 
 def list_previous_comics(update: Update, context: CallbackContext):
     limit = 10
-    current_offset = context.bot_data["list_comics_offset"]
+    current_offset = context.bot_data[OFFSET]
     subtract_value = limit + (current_offset % 10 or limit)
 
-    context.bot_data["list_comics_offset"] -= subtract_value
+    context.bot_data[OFFSET] -= subtract_value
     return list_comics(update, context)
 
 
@@ -740,7 +615,7 @@ def find_comic_by_title(update: Update, context: CallbackContext):
     if (title := context.user_data.get("data")) :
         logger.info(f"title is {title}")
         limit = 10
-        offset = context.bot_data.get("list_comics_offset", 0)
+        offset = context.bot_data.get(OFFSET, 0)
 
         fetcher = context.bot_data["fetcher"]
         fetched_data = fetcher.list_features(
@@ -767,7 +642,7 @@ def find_comic_by_title(update: Update, context: CallbackContext):
             update.message.reply_text(text=text)
             text = Text.comics_menu
 
-        context.bot_data["list_comics_offset"] = offset + min(
+        context.bot_data[OFFSET] = offset + min(
             limit, fetched_data["count"]
         )
 
@@ -790,7 +665,7 @@ def find_comic_by_title_beginning(update: Update, context: CallbackContext):
     if (title_beginning := context.user_data.get("data")) :
         logger.info(f"title beginning is {title_beginning}")
         limit = 10
-        offset = context.bot_data.get("list_comics_offset", 0)
+        offset = context.bot_data.get(OFFSET, 0)
 
         fetcher = context.bot_data["fetcher"]
         fetched_data = fetcher.list_features(
@@ -825,7 +700,7 @@ def find_comic_by_title_beginning(update: Update, context: CallbackContext):
 
             text = Text.comics_menu
 
-        context.bot_data["list_comics_offset"] = offset + min(
+        context.bot_data[OFFSET] = offset + min(
             limit, fetched_data["count"]
         )
 
@@ -848,19 +723,19 @@ def list_previous_comics_from_title_beginning(
     update: Update, context: CallbackContext
 ):
     limit = 10
-    current_offset = context.bot_data["list_comics_offset"]
+    current_offset = context.bot_data[OFFSET]
     subtract_value = limit + (current_offset % 10 or limit)
 
-    context.bot_data["list_comics_offset"] -= subtract_value
+    context.bot_data[OFFSET] -= subtract_value
     return find_comic_by_title_beginning(update, context)
 
 
 def list_previous_comics_from_title(update: Update, context: CallbackContext):
     limit = 10
-    current_offset = context.bot_data["list_comics_offset"]
+    current_offset = context.bot_data[OFFSET]
     subtract_value = limit + (current_offset % 10 or limit)
 
-    context.bot_data["list_comics_offset"] -= subtract_value
+    context.bot_data[OFFSET] -= subtract_value
     return find_comic_by_title(update, context)
 
 
@@ -868,7 +743,7 @@ def list_events(update: Update, context: CallbackContext):
     logger.info("List events command")
     limit = 10
     fetcher = context.bot_data["fetcher"]
-    offset = context.bot_data.get("list_events_offset", 0)
+    offset = context.bot_data.get(OFFSET, 0)
     fetched_data = fetcher.list_features(
         Route.EVENTS, limit=limit, offset=offset
     )
@@ -886,7 +761,7 @@ def list_events(update: Update, context: CallbackContext):
     update.callback_query.edit_message_text(
         text=Text.from_container(sorted_events), reply_markup=keyboard
     )
-    context.bot_data["list_events_offset"] = offset + min(
+    context.bot_data[OFFSET] = offset + min(
         limit, fetched_data["count"]
     )
     return States.LIST_EVENTS.value
@@ -894,10 +769,10 @@ def list_events(update: Update, context: CallbackContext):
 
 def list_previous_events(update: Update, context: CallbackContext):
     limit = 10
-    current_offset = context.bot_data["list_events_offset"]
+    current_offset = context.bot_data[OFFSET]
     subtract_value = limit + (current_offset % 10 or limit)
 
-    context.bot_data["list_events_offset"] -= subtract_value
+    context.bot_data[OFFSET] -= subtract_value
     return list_events(update, context)
 
 
@@ -907,7 +782,7 @@ def find_event_by_name(update: Update, context: CallbackContext):
     if (name := context.user_data.get("data")) :
         logger.info(f"name is {name}")
         limit = 10
-        offset = context.bot_data.get("list_events_offset", 0)
+        offset = context.bot_data.get(OFFSET, 0)
 
         fetcher = context.bot_data["fetcher"]
         fetched_data = fetcher.list_features(
@@ -934,7 +809,7 @@ def find_event_by_name(update: Update, context: CallbackContext):
             update.message.reply_text(text=text)
             text = Text.events_menu
 
-        context.bot_data["list_events_offset"] = offset + min(
+        context.bot_data[OFFSET] = offset + min(
             limit, fetched_data["count"]
         )
 
@@ -957,7 +832,7 @@ def find_event_by_name_beginning(update: Update, context: CallbackContext):
     if (name_beginning := context.user_data.get("data")) :
         logger.info(f"name beginning is {name_beginning}")
         limit = 10
-        offset = context.bot_data.get("list_events_offset", 0)
+        offset = context.bot_data.get(OFFSET, 0)
 
         fetcher = context.bot_data["fetcher"]
         fetched_data = fetcher.list_features(
@@ -990,7 +865,7 @@ def find_event_by_name_beginning(update: Update, context: CallbackContext):
                 update.callback_query.edit_message_text(text=text)
             text = Text.events_menu
 
-        context.bot_data["list_events_offset"] = offset + min(
+        context.bot_data[OFFSET] = offset + min(
             limit, fetched_data["count"]
         )
 
@@ -1013,19 +888,19 @@ def list_previous_events_from_name_beginning(
     update: Update, context: CallbackContext
 ):
     limit = 10
-    current_offset = context.bot_data["list_events_offset"]
+    current_offset = context.bot_data[OFFSET]
     subtract_value = limit + (current_offset % 10 or limit)
 
-    context.bot_data["list_events_offset"] -= subtract_value
+    context.bot_data[OFFSET] -= subtract_value
     return find_event_by_name_beginning(update, context)
 
 
 def list_previous_events_from_name(update: Update, context: CallbackContext):
     limit = 10
-    current_offset = context.bot_data["list_events_offset"]
+    current_offset = context.bot_data[OFFSET]
     subtract_value = limit + (current_offset % 10 or limit)
 
-    context.bot_data["list_events_offset"] -= subtract_value
+    context.bot_data[OFFSET] -= subtract_value
     return find_event_by_name(update, context)
 
 
@@ -1033,7 +908,7 @@ def list_series(update: Update, context: CallbackContext):
     logger.info("List series command")
     limit = 10
     fetcher = context.bot_data["fetcher"]
-    offset = context.bot_data.get("list_series_offset", 0)
+    offset = context.bot_data.get(OFFSET, 0)
     fetched_data = fetcher.list_features(
         Route.SERIES, limit=limit, offset=offset
     )
@@ -1051,7 +926,7 @@ def list_series(update: Update, context: CallbackContext):
     update.callback_query.edit_message_text(
         text=Text.from_container(sorted_series), reply_markup=keyboard,
     )
-    context.bot_data["list_series_offset"] = offset + min(
+    context.bot_data[OFFSET] = offset + min(
         limit, fetched_data["count"]
     )
     return States.LIST_SERIES.value
@@ -1059,10 +934,10 @@ def list_series(update: Update, context: CallbackContext):
 
 def list_previous_series(update: Update, context: CallbackContext):
     limit = 10
-    current_offset = context.bot_data["list_series_offset"]
+    current_offset = context.bot_data[OFFSET]
     subtract_value = limit + (current_offset % 10 or limit)
 
-    context.bot_data["list_series_offset"] -= subtract_value
+    context.bot_data[OFFSET] -= subtract_value
     return list_series(update, context)
 
 
@@ -1072,7 +947,7 @@ def find_series_by_title(update: Update, context: CallbackContext):
     if (title := context.user_data.get("data")) :
         logger.info(f"title is {title}")
         limit = 10
-        offset = context.bot_data.get("list_series_offset", 0)
+        offset = context.bot_data.get(OFFSET, 0)
 
         fetcher = context.bot_data["fetcher"]
         fetched_data = fetcher.list_features(
@@ -1099,7 +974,7 @@ def find_series_by_title(update: Update, context: CallbackContext):
             update.message.reply_text(text=text)
             text = Text.series_menu
 
-        context.bot_data["list_series_offset"] = offset + min(
+        context.bot_data[OFFSET] = offset + min(
             limit, fetched_data["count"]
         )
 
@@ -1122,7 +997,7 @@ def find_series_by_title_beginning(update: Update, context: CallbackContext):
     if (title_beginning := context.user_data.get("data")) :
         logger.info(f"title beginning is {title_beginning}")
         limit = 10
-        offset = context.bot_data.get("list_series_offset", 0)
+        offset = context.bot_data.get(OFFSET, 0)
 
         fetcher = context.bot_data["fetcher"]
         fetched_data = fetcher.list_features(
@@ -1158,7 +1033,7 @@ def find_series_by_title_beginning(update: Update, context: CallbackContext):
                 update.callback_query.edit_message_text(text=text)
             text = Text.series_menu
 
-        context.bot_data["list_series_offset"] = offset + min(
+        context.bot_data[OFFSET] = offset + min(
             limit, fetched_data["count"]
         )
 
@@ -1181,19 +1056,19 @@ def list_previous_series_from_title_beginning(
     update: Update, context: CallbackContext
 ):
     limit = 10
-    current_offset = context.bot_data["list_series_offset"]
+    current_offset = context.bot_data[OFFSET]
     subtract_value = limit + (current_offset % 10 or limit)
 
-    context.bot_data["list_series_offset"] -= subtract_value
+    context.bot_data[OFFSET] -= subtract_value
     return find_series_by_title_beginning(update, context)
 
 
 def list_previous_series_from_title(update: Update, context: CallbackContext):
     limit = 10
-    current_offset = context.bot_data["list_series_offset"]
+    current_offset = context.bot_data[OFFSET]
     subtract_value = limit + (current_offset % 10 or limit)
 
-    context.bot_data["list_series_offset"] -= subtract_value
+    context.bot_data[OFFSET] -= subtract_value
     return find_series_by_title_beginning(update, context)
 
 
@@ -1234,11 +1109,9 @@ def ask_for_input(update: Update, context: CallbackContext) -> str:
 
 
 def end_second_level(update: Update, context: CallbackContext):
-    """Return to top level conversation."""
-    logger.info("end second level")
+    context.bot_data[OFFSET] = 0
     context.user_data[START_OVER] = True
     start(update, context)
-    logger.info("returning end")
     return States.END.value
 
 
@@ -1296,7 +1169,9 @@ def main(bot_token, fetcher) -> None:
                     list_previous_characters,
                     pattern="^" + States.PREV_PAGE.value + "$",
                 ),
-                CallbackQueryHandler(Display.send_character, pattern="^(?!-1).+$",),
+                CallbackQueryHandler(
+                    Display.send_character, pattern="^(?!-1).+$",
+                ),
             ],
             States.FIND_CHARACTER_BY_NAME.value: [
                 CallbackQueryHandler(
@@ -1343,7 +1218,9 @@ def main(bot_token, fetcher) -> None:
                     list_previous_characters_from_name_beginning,
                     pattern="^" + States.PREV_PAGE.value + "$",
                 ),
-                CallbackQueryHandler(Display.send_character, pattern="^(?!-1).+$",),
+                CallbackQueryHandler(
+                    Display.send_character, pattern="^(?!-1).+$",
+                ),
             ],
         },
         fallbacks=[
@@ -1394,7 +1271,9 @@ def main(bot_token, fetcher) -> None:
                     list_previous_comics,
                     pattern="^" + States.PREV_PAGE.value + "$",
                 ),
-                CallbackQueryHandler(Display.send_comic, pattern="^(?!-1).+$",),
+                CallbackQueryHandler(
+                    Display.send_comic, pattern="^(?!-1).+$",
+                ),
             ],
             States.FIND_COMIC_BY_TITLE.value: [
                 CallbackQueryHandler(
@@ -1421,7 +1300,9 @@ def main(bot_token, fetcher) -> None:
                     list_previous_comics_from_title,
                     pattern="^" + States.PREV_PAGE.value + "$",
                 ),
-                CallbackQueryHandler(Display.send_comic, pattern="^(?!-1).+$",),
+                CallbackQueryHandler(
+                    Display.send_comic, pattern="^(?!-1).+$",
+                ),
             ],
             States.FIND_COMIC_BY_TITLE_BEGINNING.value: [
                 CallbackQueryHandler(
@@ -1448,7 +1329,9 @@ def main(bot_token, fetcher) -> None:
                     list_previous_comics_from_title_beginning,
                     pattern="^" + States.PREV_PAGE.value + "$",
                 ),
-                CallbackQueryHandler(Display.send_comic, pattern="^(?!-1).+$",),
+                CallbackQueryHandler(
+                    Display.send_comic, pattern="^(?!-1).+$",
+                ),
             ],
         },
         fallbacks=[
@@ -1499,7 +1382,9 @@ def main(bot_token, fetcher) -> None:
                     list_previous_events,
                     pattern="^" + States.PREV_PAGE.value + "$",
                 ),
-                CallbackQueryHandler(Display.send_event, pattern="^(?!-1).+$",),
+                CallbackQueryHandler(
+                    Display.send_event, pattern="^(?!-1).+$",
+                ),
             ],
             States.FIND_EVENT_BY_NAME.value: [
                 CallbackQueryHandler(
@@ -1526,7 +1411,9 @@ def main(bot_token, fetcher) -> None:
                     list_previous_events_from_name,
                     pattern="^" + States.PREV_PAGE.value + "$",
                 ),
-                CallbackQueryHandler(Display.send_event, pattern="^(?!-1).+$",),
+                CallbackQueryHandler(
+                    Display.send_event, pattern="^(?!-1).+$",
+                ),
             ],
             States.FIND_EVENT_BY_NAME_BEGINNING.value: [
                 CallbackQueryHandler(
@@ -1553,7 +1440,9 @@ def main(bot_token, fetcher) -> None:
                     list_previous_events_from_name_beginning,
                     pattern="^" + States.PREV_PAGE.value + "$",
                 ),
-                CallbackQueryHandler(Display.send_event, pattern="^(?!-1).+$",),
+                CallbackQueryHandler(
+                    Display.send_event, pattern="^(?!-1).+$",
+                ),
             ],
         },
         fallbacks=[
@@ -1604,7 +1493,9 @@ def main(bot_token, fetcher) -> None:
                     list_previous_series,
                     pattern="^" + States.PREV_PAGE.value + "$",
                 ),
-                CallbackQueryHandler(Display.send_series, pattern="^(?!-1).+$",),
+                CallbackQueryHandler(
+                    Display.send_series, pattern="^(?!-1).+$",
+                ),
             ],
             States.FIND_SERIES_BY_TITLE.value: [
                 CallbackQueryHandler(
@@ -1631,7 +1522,9 @@ def main(bot_token, fetcher) -> None:
                     list_previous_series_from_title,
                     pattern="^" + States.PREV_PAGE.value + "$",
                 ),
-                CallbackQueryHandler(Display.send_series, pattern="^(?!-1).+$",),
+                CallbackQueryHandler(
+                    Display.send_series, pattern="^(?!-1).+$",
+                ),
             ],
             States.FIND_SERIES_BY_TITLE_BEGINNING.value: [
                 CallbackQueryHandler(
@@ -1658,7 +1551,9 @@ def main(bot_token, fetcher) -> None:
                     list_previous_series_from_title_beginning,
                     pattern="^" + States.PREV_PAGE.value + "$",
                 ),
-                CallbackQueryHandler(Display.send_series, pattern="^(?!-1).+$",),
+                CallbackQueryHandler(
+                    Display.send_series, pattern="^(?!-1).+$",
+                ),
             ],
         },
         fallbacks=[
