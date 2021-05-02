@@ -4,5 +4,4 @@
 *.pyc
 venv/*
 .env
-data.json
 

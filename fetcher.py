@@ -7,7 +7,7 @@ import requests
 
 import custom_types as ct
 
-from parser import ResponseJsonParser
+from parser import ResponseJsonParser, Parsed
 
 
 class Route(IntEnum):
@@ -62,20 +62,14 @@ class Fetcher:
             **kwargs,
         )
 
-    @staticmethod
-    def total_number(r_json):
-        return ResponseJsonParser.total_number(r_json)
-
     def list_features(self, route, **kwargs):
         parser = self.LIST_PARSERS[route]
         response = self.make_request(route, **kwargs)
-        parsed = {"total": 0, "count": 0, "features": []}
         if response.status_code == 200:
             r_json: ct.ResponseJSON = response.json()
-            parsed["features"].extend(parser(r_json))
-            parsed["count"] = len(parsed["features"])
-            parsed["total"] = self.total_number(r_json)
+            parsed = parser(r_json)
         else:
+            parsed = Parsed()
             print(
                 f"""
     Response ended with status code {response.status_code},

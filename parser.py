@@ -8,12 +8,10 @@ from entities import Creator, Character, Comic, Event, Series
 class ResponseJsonParser:
 
     @staticmethod
-    def total_number(response_json):
-        return response_json["data"]["total"]
-
-    @staticmethod
-    def parse_list_characters(response_json) -> List[Character]:
+    def parse_list_characters(response_json):
         data: ct.Data = response_json["data"]
+        count = response_json["data"]["count"]
+        total = response_json["data"]["total"]
         characters = list()
 
         for result in data["results"]:
@@ -63,11 +61,13 @@ class ResponseJsonParser:
                     resource_uri,
                 )
             )
-        return characters
+        return Parsed(characters, count, total)
 
     @staticmethod
-    def parse_list_comics(response_json) -> List[Comic]:
+    def parse_list_comics(response_json):
         data = response_json["data"]
+        count = response_json["data"]["count"]
+        total = response_json["data"]["total"]
         comics = list()
 
         for result in data["results"]:
@@ -120,11 +120,13 @@ class ResponseJsonParser:
                     creators,
                 )
             )
-        return comics
+        return Parsed(comics, count, total)
 
     @staticmethod
-    def parse_list_events(response_json) -> List[Event]:
+    def parse_list_events(response_json):
         data = response_json["data"]
+        count = response_json["data"]["count"]
+        total = response_json["data"]["total"]
         events = list()
 
         for result in data["results"]:
@@ -173,11 +175,13 @@ class ResponseJsonParser:
                     previous_event,
                 )
             )
-        return events
+        return Parsed(events, count, total)
 
     @staticmethod
-    def parse_list_series(response_json) -> List[Series]:
+    def parse_list_series(response_json):
         data = response_json["data"]
+        count = response_json["data"]["count"]
+        total = response_json["data"]["total"]
         series = list()
 
         for result in data["results"]:
@@ -231,4 +235,11 @@ class ResponseJsonParser:
                     creators,
                 )
             )
-        return series
+        return Parsed(series, count, total)
+
+
+class Parsed:
+    def __init__(self, features=None, count=0, total=0):
+        self.features = features if features else []
+        self.count = count
+        self.total = total

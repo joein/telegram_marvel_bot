@@ -23,6 +23,10 @@ from fetcher import Fetcher, Route
 START_OVER = "START_OVER"
 MSG_DELETED = "MSG_DELETED"
 OFFSET = "OFFSET"
+DATA = "DATA"
+INPUT_FOR = "INPUT_FOR"
+FETCHER = "FETCHER"
+FEATURES = "FEATURES"
 
 logging.basicConfig(
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
@@ -270,9 +274,9 @@ class Display:
     CAPTION_MAX_LENGTH = 1024
 
     @classmethod
-    def extract_feature(cls, update, context, feature_name):
+    def extract_feature(cls, update, context):
         feature = None
-        for feature_ in context.chat_data[feature_name]:
+        for feature_ in context.chat_data[FEATURES]:
             field_name = "name" if hasattr(feature_, "name") else "title"
             value = getattr(feature_, field_name)
             length_limited_value = value[: cls.CALLBACK_DATA_MAX_LENGTH]
@@ -285,15 +289,15 @@ class Display:
     def character_content(cls, character):
         ch_name = character.name
         description = character.description
-        wiki = f"wiki link: {character.wiki['url'].split('?utm')[0]}"
-        detail = f"comics link: {character.detail['url'].split('?utm')[0]}"
+        wiki = f"wiki link: {character.wiki}"
+        detail = f"comics link: {character.detail}"
         caption = "\n\n".join((ch_name, description, wiki, detail))
-        return caption[:cls.CAPTION_MAX_LENGTH]
+        return caption[: cls.CAPTION_MAX_LENGTH]
 
     @classmethod
     def comic_content(cls, comic):
         page_count = f"Page count: {comic.page_count if comic.page_count else 'Unknown'}"
-        detail = f"detail link: {comic.detail['url'].split('?utm')[0]}"
+        detail = f"detail link: {comic.detail}"
         caption = "\n\n".join(
             (
                 comic.title,
@@ -304,24 +308,24 @@ class Display:
                 + "\n".join((str(creator) for creator in comic.creators)),
             )
         )
-        return caption[:cls.CAPTION_MAX_LENGTH]
+        return caption[: cls.CAPTION_MAX_LENGTH]
 
     @classmethod
     def event_content(cls, event):
         ev_name = event.name
         description = event.description
-        wiki = f"Wiki link: {event.wiki['url'].split('?utm')[0]}"
-        detail = f"Comics link: {event.detail['url'].split('?utm')[0]}"
-        next_event = f"Next event: {event.next_event['name']}"
-        previous_event = f"Previous event: {event.previous_event['name']}"
+        wiki = f"Wiki link: {event.wiki}"
+        detail = f"Comics link: {event.detail}"
+        next_event = f"Next event: {event.next_event['name'] if event.next_event else ''}"
+        previous_event = f"Previous event: {event.previous_event['name'] if event.previous_event else ''}"
         caption = "\n\n".join(
             (ev_name, description, wiki, detail, next_event, previous_event,)
         )
-        return caption[:cls.CAPTION_MAX_LENGTH]
+        return caption[: cls.CAPTION_MAX_LENGTH]
 
     @classmethod
     def series_content(cls, single_series):
-        detail = f"detail link: {single_series.detail['url'].split('?utm')[0] if single_series.detail else ''}"
+        detail = f"detail link: {single_series.detail}"
         next_series = f"Next series are: {single_series.next_series['name'] if single_series.next_series else ''}"
         previous_series = f"Previous series are: {single_series.previous_series['name'] if single_series.previous_series else ''}"
 
@@ -333,16 +337,16 @@ class Display:
                 f"Start in: {single_series.start_year}",
                 f"Ends in: {single_series.end_year}",
                 next_series,
-                previous_series
+                previous_series,
             )
         )
-        return caption[:cls.CAPTION_MAX_LENGTH]
+        return caption[: cls.CAPTION_MAX_LENGTH]
 
     @classmethod
-    def send_feature(cls, update, context, feature_name, content_extractor):
+    def send_feature(cls, update, context, content_extractor):
         context.chat_data[OFFSET] = 0
 
-        feature = cls.extract_feature(update, context, feature_name)
+        feature = cls.extract_feature(update, context)
         if feature:
             caption = content_extractor(feature)
             context.bot.send_photo(
@@ -356,22 +360,22 @@ class Display:
 
     @classmethod
     def send_character(cls, update: Update, context: CallbackContext):
-        cls.send_feature(update, context, "characters", cls.character_content)
+        cls.send_feature(update, context, cls.character_content)
         return characters_menu(update, context)
 
     @classmethod
     def send_comic(cls, update: Update, context: CallbackContext):
-        cls.send_feature(update, context, "comics", cls.comic_content)
+        cls.send_feature(update, context, cls.comic_content)
         return comics_menu(update, context)
 
     @classmethod
     def send_event(cls, update: Update, context: CallbackContext):
-        cls.send_feature(update, context, "events", cls.event_content)
+        cls.send_feature(update, context, cls.event_content)
         return events_menu(update, context)
 
     @classmethod
     def send_series(cls, update: Update, context: CallbackContext):
-        cls.send_feature(update, context, "series", cls.series_content)
+        cls.send_feature(update, context, cls.series_content)
         return series_menu(update, context)
 
 
@@ -395,8 +399,8 @@ def start(update: Update, context: CallbackContext):
 def _inner_menu(update: Update, context: CallbackContext, text, keyboard):
     context.chat_data[OFFSET] = 0
 
-    if "data" in context.chat_data:
-        del context.chat_data["data"]
+    if DATA in context.chat_data:
+        del context.chat_data[DATA]
 
     if context.chat_data.get(MSG_DELETED):
         del context.chat_data[MSG_DELETED]
@@ -412,59 +416,62 @@ def _inner_menu(update: Update, context: CallbackContext, text, keyboard):
             text=text, reply_markup=keyboard
         )
 
+
 def characters_menu(update: Update, context: CallbackContext) -> str:
-    text = Text.characters_menu
-    keyboard = CustomKeyboard.characters_menu
-    _inner_menu(update, context, text, keyboard)
+    _inner_menu(
+        update, context, Text.characters_menu, CustomKeyboard.characters_menu
+    )
     return States.CHARACTERS.value
 
 
 def comics_menu(update: Update, context: CallbackContext) -> str:
-    text = Text.comics_menu
-    keyboard = CustomKeyboard.comics_menu
-    _inner_menu(update, context, text, keyboard)
+    _inner_menu(update, context, Text.comics_menu, CustomKeyboard.comics_menu)
     return States.COMICS.value
 
 
 def events_menu(update: Update, context: CallbackContext) -> str:
-    text = Text.events_menu
-    keyboard = CustomKeyboard.events_menu
-    _inner_menu(update, context, text, keyboard)
+    _inner_menu(update, context, Text.events_menu, CustomKeyboard.events_menu)
     return States.EVENTS.value
 
 
 def series_menu(update: Update, context: CallbackContext) -> str:
-    text = Text.series_menu
-    keyboard = CustomKeyboard.series_menu
-    _inner_menu(update, context, text, keyboard)
+    _inner_menu(update, context, Text.series_menu, CustomKeyboard.series_menu)
     return States.SERIES.value
 
 
-def list_characters(update: Update, context: CallbackContext):
-    logger.info("List characters command")
+def _list_features(update: Update, context: CallbackContext, route):
     limit = 10
-    fetcher = context.bot_data["fetcher"]
-    offset = context.chat_data.get(OFFSET, 0)
-    fetched_data = fetcher.list_features(
-        Route.CHARACTERS, limit=limit, offset=offset
-    )
-    logger.info(f"{limit + offset} and total {fetched_data['total']}")
-    has_more_pages = limit + offset < fetched_data["total"]
 
-    characters = fetched_data["features"]
-    context.chat_data["characters"] = characters
-    sorted_characters = sorted([character.name for character in characters])
+    fetcher = context.bot_data[FETCHER]
+    offset = context.chat_data.get(OFFSET, 0)
+    fetched_data = fetcher.list_features(route, limit=limit, offset=offset)
+    logger.info(f"{limit + offset} and total {fetched_data.total}")
+
+    has_more_pages = limit + offset < fetched_data.total
+
+    features = fetched_data.features
+    context.chat_data[FEATURES] = features
+
+    sorted_features = sorted(
+        [
+            getattr(feature, "name", getattr(feature, "title", ""))
+            for feature in features
+        ]
+    )
     keyboard = CustomKeyboard.keyboard_from_iterable(
-        sorted_characters, bool(offset), has_more_pages
+        sorted_features, bool(offset), has_more_pages
     )
 
     update.callback_query.answer()
     update.callback_query.edit_message_text(
-        text=Text.from_container(sorted_characters), reply_markup=keyboard
+        text=Text.from_container(sorted_features), reply_markup=keyboard
     )
-    context.chat_data[OFFSET] = offset + min(
-        limit, fetched_data["count"]
-    )
+    context.chat_data[OFFSET] = offset + min(limit, fetched_data.count)
+
+
+def list_characters(update: Update, context: CallbackContext):
+    logger.info("List characters command")
+    _list_features(update, context, Route.CHARACTERS)
     return States.LIST_CHARACTERS.value
 
 
@@ -490,13 +497,13 @@ def list_previous_characters_from_name_beginning(
 
 def find_character_by_name(update: Update, context: CallbackContext):
     logger.info("Find character by name")
-    if (name := context.chat_data.get("data")) :
+    if (name := context.chat_data.get(DATA)) :
 
         logger.info(f"name is {name}")
-        fetcher = context.bot_data["fetcher"]
+        fetcher = context.bot_data[FETCHER]
 
         fetched_data = fetcher.list_features(Route.CHARACTERS, name=name)
-        characters = fetched_data["features"]
+        characters = fetched_data.features
 
         if characters:
             ch = characters[0]
@@ -509,10 +516,10 @@ def find_character_by_name(update: Update, context: CallbackContext):
         keyboard = CustomKeyboard.characters_menu
         text = Text.characters_menu
         update.message.reply_text(text=text, reply_markup=keyboard)
-        if "data" in context.chat_data:
-            del context.chat_data["data"]
+        if DATA in context.chat_data:
+            del context.chat_data[DATA]
     else:
-        context.chat_data["input_for"] = States.FIND_CHARACTER_BY_NAME.value
+        context.chat_data[INPUT_FOR] = States.FIND_CHARACTER_BY_NAME.value
         return ask_for_input(update, context)
 
     return States.FIND_CHARACTER_BY_NAME.value
@@ -521,23 +528,23 @@ def find_character_by_name(update: Update, context: CallbackContext):
 def find_character_by_name_beginning(update: Update, context: CallbackContext):
     logger.info("Find character by name beginning")
 
-    if (name_beginning := context.chat_data.get("data")) :
+    if (name_beginning := context.chat_data.get(DATA)) :
         logger.info(f"name beginning is {name_beginning}")
         limit = 10
         offset = context.chat_data.get(OFFSET, 0)
 
-        fetcher = context.bot_data["fetcher"]
+        fetcher = context.bot_data[FETCHER]
         fetched_data = fetcher.list_features(
             Route.CHARACTERS,
             nameStartsWith=name_beginning,
             limit=limit,
             offset=offset,
         )
-        logger.info(f"{limit + offset} and total {fetched_data['total']}")
-        has_more_pages = limit + offset < fetched_data["total"]
+        logger.info(f"{limit + offset} and total {fetched_data.total}")
+        has_more_pages = limit + offset < fetched_data.total
 
-        characters = fetched_data["features"]
-        context.chat_data["characters"] = characters
+        characters = fetched_data.features
+        context.chat_data[FEATURES] = characters
 
         sorted_characters = sorted(
             [character.name for character in characters]
@@ -546,9 +553,7 @@ def find_character_by_name_beginning(update: Update, context: CallbackContext):
             sorted_characters, bool(offset), has_more_pages
         )
 
-        context.chat_data[OFFSET] = offset + min(
-            limit, fetched_data["count"]
-        )
+        context.chat_data[OFFSET] = offset + min(limit, fetched_data.count)
 
         text = (
             Text.from_container(sorted_characters)
@@ -565,7 +570,7 @@ def find_character_by_name_beginning(update: Update, context: CallbackContext):
             )
     else:
         context.chat_data[
-            "input_for"
+            INPUT_FOR
         ] = States.FIND_CHARACTER_BY_NAME_BEGINNING.value
         return ask_for_input(update, context)
     return States.FIND_CHARACTER_BY_NAME_BEGINNING.value
@@ -573,30 +578,7 @@ def find_character_by_name_beginning(update: Update, context: CallbackContext):
 
 def list_comics(update: Update, context: CallbackContext):
     logger.info("List comics command")
-    limit = 10
-    fetcher = context.bot_data["fetcher"]
-    offset = context.chat_data.get(OFFSET, 0)
-    fetched_data = fetcher.list_features(
-        Route.COMICS, limit=limit, offset=offset
-    )
-    logger.info(f"{limit + offset} and total {fetched_data['total']}")
-    has_more_pages = limit + offset < fetched_data["total"]
-
-    comics = fetched_data["features"]
-    context.chat_data["comics"] = comics
-    sorted_comics = sorted([comic.title for comic in comics])
-
-    keyboard = CustomKeyboard.keyboard_from_iterable(
-        sorted_comics, bool(offset), has_more_pages
-    )
-
-    update.callback_query.answer()
-    update.callback_query.edit_message_text(
-        text=Text.from_container(sorted_comics), reply_markup=keyboard
-    )
-    context.chat_data[OFFSET] = offset + min(
-        limit, fetched_data["count"]
-    )
+    _list_features(update, context, Route.COMICS)
     return States.LIST_COMICS.value
 
 
@@ -612,20 +594,20 @@ def list_previous_comics(update: Update, context: CallbackContext):
 def find_comic_by_title(update: Update, context: CallbackContext):
     logger.info("Find comic by title ")
 
-    if (title := context.chat_data.get("data")) :
+    if (title := context.chat_data.get(DATA)) :
         logger.info(f"title is {title}")
         limit = 10
         offset = context.chat_data.get(OFFSET, 0)
 
-        fetcher = context.bot_data["fetcher"]
+        fetcher = context.bot_data[FETCHER]
         fetched_data = fetcher.list_features(
             Route.COMICS, title=title, limit=limit, offset=offset,
         )
-        logger.info(f"{limit + offset} and total {fetched_data['total']}")
-        has_more_pages = limit + offset < fetched_data["total"]
+        logger.info(f"{limit + offset} and total {fetched_data.total}")
+        has_more_pages = limit + offset < fetched_data.total
 
-        comics = fetched_data["features"]
-        context.chat_data["comics"] = comics
+        comics = fetched_data.features
+        context.chat_data[FEATURES] = comics
 
         sorted_comics = sorted([comic.title for comic in comics])
         keyboard = CustomKeyboard.keyboard_from_iterable(
@@ -636,15 +618,13 @@ def find_comic_by_title(update: Update, context: CallbackContext):
         if not keyboard:
             keyboard = CustomKeyboard.comics_menu
 
-            if "data" in context.chat_data:
-                del context.chat_data["data"]
+            if DATA in context.chat_data:
+                del context.chat_data[DATA]
             text = Text.not_found_by_name(title)
             update.message.reply_text(text=text)
             text = Text.comics_menu
 
-        context.chat_data[OFFSET] = offset + min(
-            limit, fetched_data["count"]
-        )
+        context.chat_data[OFFSET] = offset + min(limit, fetched_data.count)
 
         if update.message:
             update.message.reply_text(text=text, reply_markup=keyboard)
@@ -654,7 +634,7 @@ def find_comic_by_title(update: Update, context: CallbackContext):
                 text=text, reply_markup=keyboard
             )
     else:
-        context.chat_data["input_for"] = States.FIND_COMIC_BY_TITLE.value
+        context.chat_data[INPUT_FOR] = States.FIND_COMIC_BY_TITLE.value
         return ask_for_input(update, context)
     return States.FIND_COMIC_BY_TITLE.value
 
@@ -662,23 +642,23 @@ def find_comic_by_title(update: Update, context: CallbackContext):
 def find_comic_by_title_beginning(update: Update, context: CallbackContext):
     logger.info("Find comic by title beginning")
 
-    if (title_beginning := context.chat_data.get("data")) :
+    if (title_beginning := context.chat_data.get(DATA)) :
         logger.info(f"title beginning is {title_beginning}")
         limit = 10
         offset = context.chat_data.get(OFFSET, 0)
 
-        fetcher = context.bot_data["fetcher"]
+        fetcher = context.bot_data[FETCHER]
         fetched_data = fetcher.list_features(
             Route.COMICS,
             titleStartsWith=title_beginning,
             limit=limit,
             offset=offset,
         )
-        logger.info(f"{limit + offset} and total {fetched_data['total']}")
-        has_more_pages = limit + offset < fetched_data["total"]
+        logger.info(f"{limit + offset} and total {fetched_data.total}")
+        has_more_pages = limit + offset < fetched_data.total
 
-        comics = fetched_data["features"]
-        context.chat_data["comics"] = comics
+        comics = fetched_data.features
+        context.chat_data[FEATURES] = comics
 
         sorted_comics = sorted([comic.title for comic in comics])
         keyboard = CustomKeyboard.keyboard_from_iterable(
@@ -687,8 +667,8 @@ def find_comic_by_title_beginning(update: Update, context: CallbackContext):
         text = Text.from_container(sorted_comics)
         if not keyboard:
             keyboard = CustomKeyboard.comics_menu
-            if "data" in context.chat_data:
-                del context.chat_data["data"]
+            if DATA in context.chat_data:
+                del context.chat_data[DATA]
 
             text = Text.not_found_by_name_beginning(title_beginning)
 
@@ -700,9 +680,7 @@ def find_comic_by_title_beginning(update: Update, context: CallbackContext):
 
             text = Text.comics_menu
 
-        context.chat_data[OFFSET] = offset + min(
-            limit, fetched_data["count"]
-        )
+        context.chat_data[OFFSET] = offset + min(limit, fetched_data.count)
 
         if update.message:
             update.message.reply_text(text=text, reply_markup=keyboard)
@@ -713,7 +691,7 @@ def find_comic_by_title_beginning(update: Update, context: CallbackContext):
             )
     else:
         context.chat_data[
-            "input_for"
+            INPUT_FOR
         ] = States.FIND_COMIC_BY_TITLE_BEGINNING.value
         return ask_for_input(update, context)
     return States.FIND_COMIC_BY_TITLE_BEGINNING.value
@@ -741,29 +719,7 @@ def list_previous_comics_from_title(update: Update, context: CallbackContext):
 
 def list_events(update: Update, context: CallbackContext):
     logger.info("List events command")
-    limit = 10
-    fetcher = context.bot_data["fetcher"]
-    offset = context.chat_data.get(OFFSET, 0)
-    fetched_data = fetcher.list_features(
-        Route.EVENTS, limit=limit, offset=offset
-    )
-    logger.info(f"{limit + offset} and total {fetched_data['total']}")
-    has_more_pages = limit + offset < fetched_data["total"]
-
-    events = fetched_data["features"]
-    context.chat_data["events"] = events
-    sorted_events = sorted([event.name for event in events])
-    keyboard = CustomKeyboard.keyboard_from_iterable(
-        sorted_events, bool(offset), has_more_pages
-    )
-
-    update.callback_query.answer()
-    update.callback_query.edit_message_text(
-        text=Text.from_container(sorted_events), reply_markup=keyboard
-    )
-    context.chat_data[OFFSET] = offset + min(
-        limit, fetched_data["count"]
-    )
+    _list_features(update, context, Route.EVENTS)
     return States.LIST_EVENTS.value
 
 
@@ -779,20 +735,20 @@ def list_previous_events(update: Update, context: CallbackContext):
 def find_event_by_name(update: Update, context: CallbackContext):
     logger.info("Find event by name ")
 
-    if (name := context.chat_data.get("data")) :
+    if (name := context.chat_data.get(DATA)) :
         logger.info(f"name is {name}")
         limit = 10
         offset = context.chat_data.get(OFFSET, 0)
 
-        fetcher = context.bot_data["fetcher"]
+        fetcher = context.bot_data[FETCHER]
         fetched_data = fetcher.list_features(
             Route.EVENTS, name=name, limit=limit, offset=offset,
         )
-        logger.info(f"{limit + offset} and total {fetched_data['total']}")
-        has_more_pages = limit + offset < fetched_data["total"]
+        logger.info(f"{limit + offset} and total {fetched_data.total}")
+        has_more_pages = limit + offset < fetched_data.total
 
-        events = fetched_data["features"]
-        context.chat_data["events"] = events
+        events = fetched_data.features
+        context.chat_data[FEATURES] = events
 
         sorted_events = sorted([event.name for event in events])
         keyboard = CustomKeyboard.keyboard_from_iterable(
@@ -803,15 +759,13 @@ def find_event_by_name(update: Update, context: CallbackContext):
         if not keyboard:
             keyboard = CustomKeyboard.events_menu
 
-            if "data" in context.chat_data:
-                del context.chat_data["data"]
+            if DATA in context.chat_data:
+                del context.chat_data[DATA]
             text = Text.not_found_by_name(name)
             update.message.reply_text(text=text)
             text = Text.events_menu
 
-        context.chat_data[OFFSET] = offset + min(
-            limit, fetched_data["count"]
-        )
+        context.chat_data[OFFSET] = offset + min(limit, fetched_data.count)
 
         if update.message:
             update.message.reply_text(text=text, reply_markup=keyboard)
@@ -821,7 +775,7 @@ def find_event_by_name(update: Update, context: CallbackContext):
                 text=text, reply_markup=keyboard
             )
     else:
-        context.chat_data["input_for"] = States.FIND_EVENT_BY_NAME.value
+        context.chat_data[INPUT_FOR] = States.FIND_EVENT_BY_NAME.value
         return ask_for_input(update, context)
     return States.FIND_EVENT_BY_NAME.value
 
@@ -829,23 +783,23 @@ def find_event_by_name(update: Update, context: CallbackContext):
 def find_event_by_name_beginning(update: Update, context: CallbackContext):
     logger.info("Find event by name beginning")
 
-    if (name_beginning := context.chat_data.get("data")) :
+    if (name_beginning := context.chat_data.get(DATA)) :
         logger.info(f"name beginning is {name_beginning}")
         limit = 10
         offset = context.chat_data.get(OFFSET, 0)
 
-        fetcher = context.bot_data["fetcher"]
+        fetcher = context.bot_data[FETCHER]
         fetched_data = fetcher.list_features(
             Route.EVENTS,
             nameStartsWith=name_beginning,
             limit=limit,
             offset=offset,
         )
-        logger.info(f"{limit + offset} and total {fetched_data['total']}")
-        has_more_pages = limit + offset < fetched_data["total"]
+        logger.info(f"{limit + offset} and total {fetched_data.total}")
+        has_more_pages = limit + offset < fetched_data.total
 
-        events = fetched_data["features"]
-        context.chat_data["events"] = events
+        events = fetched_data.features
+        context.chat_data[FEATURES] = events
 
         sorted_events = sorted([event.name for event in events])
         keyboard = CustomKeyboard.keyboard_from_iterable(
@@ -854,8 +808,8 @@ def find_event_by_name_beginning(update: Update, context: CallbackContext):
         text = Text.from_container(sorted_events)
 
         if not keyboard:
-            if "data" in context.chat_data:
-                del context.chat_data["data"]
+            if DATA in context.chat_data:
+                del context.chat_data[DATA]
             keyboard = CustomKeyboard.events_menu
             text = Text.not_found_by_name_beginning(name_beginning)
             if update.message:
@@ -865,9 +819,7 @@ def find_event_by_name_beginning(update: Update, context: CallbackContext):
                 update.callback_query.edit_message_text(text=text)
             text = Text.events_menu
 
-        context.chat_data[OFFSET] = offset + min(
-            limit, fetched_data["count"]
-        )
+        context.chat_data[OFFSET] = offset + min(limit, fetched_data.count)
 
         if update.message:
             update.message.reply_text(text=text, reply_markup=keyboard)
@@ -878,7 +830,7 @@ def find_event_by_name_beginning(update: Update, context: CallbackContext):
             )
     else:
         context.chat_data[
-            "input_for"
+            INPUT_FOR
         ] = States.FIND_EVENT_BY_NAME_BEGINNING.value
         return ask_for_input(update, context)
     return States.FIND_EVENT_BY_NAME_BEGINNING.value
@@ -906,29 +858,7 @@ def list_previous_events_from_name(update: Update, context: CallbackContext):
 
 def list_series(update: Update, context: CallbackContext):
     logger.info("List series command")
-    limit = 10
-    fetcher = context.bot_data["fetcher"]
-    offset = context.chat_data.get(OFFSET, 0)
-    fetched_data = fetcher.list_features(
-        Route.SERIES, limit=limit, offset=offset
-    )
-    logger.info(f"{limit + offset} and total {fetched_data['total']}")
-    has_more_pages = limit + offset < fetched_data["total"]
-
-    series = fetched_data["features"]
-    context.chat_data["series"] = series
-    sorted_series = sorted([single_series.title for single_series in series])
-    keyboard = CustomKeyboard.keyboard_from_iterable(
-        sorted_series, bool(offset), has_more_pages
-    )
-
-    update.callback_query.answer()
-    update.callback_query.edit_message_text(
-        text=Text.from_container(sorted_series), reply_markup=keyboard,
-    )
-    context.chat_data[OFFSET] = offset + min(
-        limit, fetched_data["count"]
-    )
+    _list_features(update, context, Route.SERIES)
     return States.LIST_SERIES.value
 
 
@@ -944,20 +874,20 @@ def list_previous_series(update: Update, context: CallbackContext):
 def find_series_by_title(update: Update, context: CallbackContext):
     logger.info("Find series by title ")
 
-    if (title := context.chat_data.get("data")) :
+    if (title := context.chat_data.get(DATA)) :
         logger.info(f"title is {title}")
         limit = 10
         offset = context.chat_data.get(OFFSET, 0)
 
-        fetcher = context.bot_data["fetcher"]
+        fetcher = context.bot_data[FETCHER]
         fetched_data = fetcher.list_features(
             Route.SERIES, title=title, limit=limit, offset=offset,
         )
-        logger.info(f"{limit + offset} and total {fetched_data['total']}")
-        has_more_pages = limit + offset < fetched_data["total"]
+        logger.info(f"{limit + offset} and total {fetched_data.total}")
+        has_more_pages = limit + offset < fetched_data.total
 
-        series = fetched_data["features"]
-        context.chat_data["series"] = series
+        series = fetched_data.features
+        context.chat_data[FEATURES] = series
 
         sorted_series = sorted(
             [single_series.title for single_series in series]
@@ -968,15 +898,13 @@ def find_series_by_title(update: Update, context: CallbackContext):
         text = Text.from_container(sorted_series)
         if not keyboard:
             keyboard = CustomKeyboard.series_menu
-            if "data" in context.chat_data:
-                del context.chat_data["data"]
+            if DATA in context.chat_data:
+                del context.chat_data[DATA]
             text = Text.not_found_by_name(title)
             update.message.reply_text(text=text)
             text = Text.series_menu
 
-        context.chat_data[OFFSET] = offset + min(
-            limit, fetched_data["count"]
-        )
+        context.chat_data[OFFSET] = offset + min(limit, fetched_data.count)
 
         if update.message:
             update.message.reply_text(text=text, reply_markup=keyboard)
@@ -986,7 +914,7 @@ def find_series_by_title(update: Update, context: CallbackContext):
                 text=text, reply_markup=keyboard
             )
     else:
-        context.chat_data["input_for"] = States.FIND_SERIES_BY_TITLE.value
+        context.chat_data[INPUT_FOR] = States.FIND_SERIES_BY_TITLE.value
         return ask_for_input(update, context)
     return States.FIND_SERIES_BY_TITLE.value
 
@@ -994,23 +922,23 @@ def find_series_by_title(update: Update, context: CallbackContext):
 def find_series_by_title_beginning(update: Update, context: CallbackContext):
     logger.info("Find series by title beginning")
 
-    if (title_beginning := context.chat_data.get("data")) :
+    if (title_beginning := context.chat_data.get(DATA)) :
         logger.info(f"title beginning is {title_beginning}")
         limit = 10
         offset = context.chat_data.get(OFFSET, 0)
 
-        fetcher = context.bot_data["fetcher"]
+        fetcher = context.bot_data[FETCHER]
         fetched_data = fetcher.list_features(
             Route.SERIES,
             titleStartsWith=title_beginning,
             limit=limit,
             offset=offset,
         )
-        logger.info(f"{limit + offset} and total {fetched_data['total']}")
-        has_more_pages = limit + offset < fetched_data["total"]
+        logger.info(f"{limit + offset} and total {fetched_data.total}")
+        has_more_pages = limit + offset < fetched_data.total
 
-        series = fetched_data["features"]
-        context.chat_data["series"] = series
+        series = fetched_data.features
+        context.chat_data[FEATURES] = series
 
         sorted_series = sorted(
             [single_series.title for single_series in series]
@@ -1022,8 +950,8 @@ def find_series_by_title_beginning(update: Update, context: CallbackContext):
 
         if not keyboard:
             keyboard = CustomKeyboard.series_menu
-            if "data" in context.chat_data:
-                del context.chat_data["data"]
+            if DATA in context.chat_data:
+                del context.chat_data[DATA]
 
             text = Text.not_found_by_name_beginning(title_beginning)
             if update.message:
@@ -1033,9 +961,7 @@ def find_series_by_title_beginning(update: Update, context: CallbackContext):
                 update.callback_query.edit_message_text(text=text)
             text = Text.series_menu
 
-        context.chat_data[OFFSET] = offset + min(
-            limit, fetched_data["count"]
-        )
+        context.chat_data[OFFSET] = offset + min(limit, fetched_data.count)
 
         if update.message:
             update.message.reply_text(text=text, reply_markup=keyboard)
@@ -1046,7 +972,7 @@ def find_series_by_title_beginning(update: Update, context: CallbackContext):
             )
     else:
         context.chat_data[
-            "input_for"
+            INPUT_FOR
         ] = States.FIND_SERIES_BY_TITLE_BEGINNING.value
         return ask_for_input(update, context)
     return States.FIND_SERIES_BY_TITLE_BEGINNING.value
@@ -1090,17 +1016,17 @@ def select_feature(feature, update: Update, context: CallbackContext):
 def save_input(update: Update, context: CallbackContext) -> str:
     logger.info("save input")
     """Save input for feature and return to feature selection."""
-    context.chat_data["data"] = update.message.text
+    context.chat_data[DATA] = update.message.text
 
     logger.info("return select feature")
-    logger.info(f'input for {context.chat_data["input_for"]}')
-    return select_feature(context.chat_data["input_for"], update, context)
+    logger.info(f"input for {context.chat_data[INPUT_FOR]}")
+    return select_feature(context.chat_data[INPUT_FOR], update, context)
 
 
 def ask_for_input(update: Update, context: CallbackContext) -> str:
     logger.info("ask for input")
     """Prompt user to input data for selected feature."""
-    context.chat_data["data"] = update.callback_query.data
+    context.chat_data[DATA] = update.callback_query.data
     text = Text.ask_for_input
     update.callback_query.answer()
     update.callback_query.edit_message_text(text=text)
@@ -1129,7 +1055,7 @@ def end(update: Update, _: CallbackContext):
 def main(bot_token, fetcher) -> None:
     updater = Updater(bot_token)
     dispatcher = updater.dispatcher
-    dispatcher.bot_data["fetcher"] = fetcher
+    dispatcher.bot_data[FETCHER] = fetcher
 
     characters_conv = ConversationHandler(
         entry_points=[
