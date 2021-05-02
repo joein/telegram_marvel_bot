@@ -399,7 +399,7 @@ def start(update: Update, context: CallbackContext):
 def _inner_menu(update: Update, context: CallbackContext, text, keyboard):
     context.chat_data[OFFSET] = 0
 
-    if DATA in context.chat_data:
+    if context.chat_data.get(DATA):
         del context.chat_data[DATA]
 
     if context.chat_data.get(MSG_DELETED):
@@ -487,6 +487,13 @@ def list_previous_characters(update: Update, context: CallbackContext):
     return list_characters(update, context)
 
 
+def list_previous_characters_from_name(
+    update: Update, context: CallbackContext
+):
+    _list_previous_features(update, context)
+    return find_character_by_name(update, context)
+
+
 def list_previous_characters_from_name_beginning(
     update: Update, context: CallbackContext
 ):
@@ -494,85 +501,82 @@ def list_previous_characters_from_name_beginning(
     return find_character_by_name_beginning(update, context)
 
 
-def find_character_by_name(update: Update, context: CallbackContext):
-    logger.info("Find character by name")
-    if (name := context.chat_data.get(DATA)) :
-
-        logger.info(f"name is {name}")
-        fetcher = context.bot_data[FETCHER]
-
-        fetched_data = fetcher.list_features(Route.CHARACTERS, name=name)
-        characters = fetched_data.features
-
-        if characters:
-            ch = characters[0]
-            content = Display.character_content(ch)
-            update.message.reply_photo(ch.img_link, caption=content)
-        else:
-            text = Text.not_found_by_name(name)
-            update.message.reply_text(text=text)
-
-        keyboard = CustomKeyboard.characters_menu
-        text = Text.characters_menu
-        update.message.reply_text(text=text, reply_markup=keyboard)
-        if DATA in context.chat_data:
-            del context.chat_data[DATA]
-    else:
-        context.chat_data[INPUT_FOR] = States.FIND_CHARACTER_BY_NAME.value
+def _find_feature_by_name(
+    update: Update,
+    context: CallbackContext,
+    route,
+    filter_key,
+    menu_keyboard,
+    return_state,
+):
+    if not (value := context.chat_data.get(DATA)):
+        context.chat_data[INPUT_FOR] = return_state
         return ask_for_input(update, context)
 
-    return States.FIND_CHARACTER_BY_NAME.value
+    limit = 10
+    offset = context.chat_data.get(OFFSET, 0)
+    fetcher = context.bot_data[FETCHER]
+    fetched_data = fetcher.list_features(
+        route, **{filter_key: value, "limit": limit, "offset": offset}
+    )
+    has_more_pages = limit + offset < fetched_data.total
+    features = fetched_data.features
+    context.chat_data[FEATURES] = features
+    sorted_features = sorted(
+        [
+            getattr(feature, "name", getattr(feature, "title", ""))
+            for feature in features
+        ]
+    )
+    keyboard = CustomKeyboard.keyboard_from_iterable(
+        sorted_features, bool(offset), has_more_pages
+    )
+    text = Text.from_container(sorted_features)
+
+    if not keyboard:
+        keyboard = menu_keyboard
+
+        if DATA in context.chat_data:
+            del context.chat_data[DATA]
+        text = Text.not_found_by_name(value)
+        update.message.reply_text(text=text)
+        text = Text.characters_menu
+
+    context.chat_data[OFFSET] = offset + min(limit, fetched_data.count)
+
+    if update.message:
+        update.message.reply_text(text=text, reply_markup=keyboard)
+    else:
+        update.callback_query.answer()
+        update.callback_query.edit_message_text(
+            text=text, reply_markup=keyboard
+        )
+
+    return return_state
+
+
+def find_character_by_name(update: Update, context: CallbackContext):
+    logger.info("Find character by name")
+    return _find_feature_by_name(
+        update,
+        context,
+        Route.CHARACTERS,
+        "name",
+        CustomKeyboard.characters_menu,
+        States.FIND_CHARACTER_BY_NAME.value,
+    )
 
 
 def find_character_by_name_beginning(update: Update, context: CallbackContext):
     logger.info("Find character by name beginning")
-
-    if (name_beginning := context.chat_data.get(DATA)) :
-        logger.info(f"name beginning is {name_beginning}")
-        limit = 10
-        offset = context.chat_data.get(OFFSET, 0)
-
-        fetcher = context.bot_data[FETCHER]
-        fetched_data = fetcher.list_features(
-            Route.CHARACTERS,
-            nameStartsWith=name_beginning,
-            limit=limit,
-            offset=offset,
-        )
-        logger.info(f"{limit + offset} and total {fetched_data.total}")
-        has_more_pages = limit + offset < fetched_data.total
-
-        characters = fetched_data.features
-        context.chat_data[FEATURES] = characters
-
-        sorted_characters = sorted(
-            [character.name for character in characters]
-        )
-        keyboard = CustomKeyboard.keyboard_from_iterable(
-            sorted_characters, bool(offset), has_more_pages
-        )
-
-        context.chat_data[OFFSET] = offset + min(limit, fetched_data.count)
-
-        text = (
-            Text.from_container(sorted_characters)
-            if characters
-            else Text.not_found_by_name_beginning(name_beginning)
-        )
-
-        if update.message:
-            update.message.reply_text(text=text, reply_markup=keyboard)
-        else:
-            update.callback_query.answer()
-            update.callback_query.edit_message_text(
-                text=text, reply_markup=keyboard
-            )
-    else:
-        context.chat_data[
-            INPUT_FOR
-        ] = States.FIND_CHARACTER_BY_NAME_BEGINNING.value
-        return ask_for_input(update, context)
-    return States.FIND_CHARACTER_BY_NAME_BEGINNING.value
+    return _find_feature_by_name(
+        update,
+        context,
+        Route.CHARACTERS,
+        "nameStartsWith",
+        CustomKeyboard.characters_menu,
+        States.FIND_CHARACTER_BY_NAME_BEGINNING.value,
+    )
 
 
 def list_comics(update: Update, context: CallbackContext):
@@ -587,109 +591,27 @@ def list_previous_comics(update: Update, context: CallbackContext):
 
 
 def find_comic_by_title(update: Update, context: CallbackContext):
-    logger.info("Find comic by title ")
-
-    if (title := context.chat_data.get(DATA)) :
-        logger.info(f"title is {title}")
-        limit = 10
-        offset = context.chat_data.get(OFFSET, 0)
-
-        fetcher = context.bot_data[FETCHER]
-        fetched_data = fetcher.list_features(
-            Route.COMICS, title=title, limit=limit, offset=offset,
-        )
-        logger.info(f"{limit + offset} and total {fetched_data.total}")
-        has_more_pages = limit + offset < fetched_data.total
-
-        comics = fetched_data.features
-        context.chat_data[FEATURES] = comics
-
-        sorted_comics = sorted([comic.title for comic in comics])
-        keyboard = CustomKeyboard.keyboard_from_iterable(
-            sorted_comics, bool(offset), has_more_pages
-        )
-        text = Text.from_container(sorted_comics)
-
-        if not keyboard:
-            keyboard = CustomKeyboard.comics_menu
-
-            if DATA in context.chat_data:
-                del context.chat_data[DATA]
-            text = Text.not_found_by_name(title)
-            update.message.reply_text(text=text)
-            text = Text.comics_menu
-
-        context.chat_data[OFFSET] = offset + min(limit, fetched_data.count)
-
-        if update.message:
-            update.message.reply_text(text=text, reply_markup=keyboard)
-        else:
-            update.callback_query.answer()
-            update.callback_query.edit_message_text(
-                text=text, reply_markup=keyboard
-            )
-    else:
-        context.chat_data[INPUT_FOR] = States.FIND_COMIC_BY_TITLE.value
-        return ask_for_input(update, context)
-    return States.FIND_COMIC_BY_TITLE.value
+    logger.info("Find comic by title")
+    return _find_feature_by_name(
+        update,
+        context,
+        Route.COMICS,
+        "title",
+        CustomKeyboard.comics_menu,
+        States.FIND_COMIC_BY_TITLE.value,
+    )
 
 
 def find_comic_by_title_beginning(update: Update, context: CallbackContext):
     logger.info("Find comic by title beginning")
-
-    if (title_beginning := context.chat_data.get(DATA)) :
-        logger.info(f"title beginning is {title_beginning}")
-        limit = 10
-        offset = context.chat_data.get(OFFSET, 0)
-
-        fetcher = context.bot_data[FETCHER]
-        fetched_data = fetcher.list_features(
-            Route.COMICS,
-            titleStartsWith=title_beginning,
-            limit=limit,
-            offset=offset,
-        )
-        logger.info(f"{limit + offset} and total {fetched_data.total}")
-        has_more_pages = limit + offset < fetched_data.total
-
-        comics = fetched_data.features
-        context.chat_data[FEATURES] = comics
-
-        sorted_comics = sorted([comic.title for comic in comics])
-        keyboard = CustomKeyboard.keyboard_from_iterable(
-            sorted_comics, bool(offset), has_more_pages
-        )
-        text = Text.from_container(sorted_comics)
-        if not keyboard:
-            keyboard = CustomKeyboard.comics_menu
-            if DATA in context.chat_data:
-                del context.chat_data[DATA]
-
-            text = Text.not_found_by_name_beginning(title_beginning)
-
-            if update.message:
-                update.message.reply_text(text=text)
-            else:
-                update.callback_query.answer()
-                update.callback_query.edit_message_text(text=text)
-
-            text = Text.comics_menu
-
-        context.chat_data[OFFSET] = offset + min(limit, fetched_data.count)
-
-        if update.message:
-            update.message.reply_text(text=text, reply_markup=keyboard)
-        else:
-            update.callback_query.answer()
-            update.callback_query.edit_message_text(
-                text=text, reply_markup=keyboard
-            )
-    else:
-        context.chat_data[
-            INPUT_FOR
-        ] = States.FIND_COMIC_BY_TITLE_BEGINNING.value
-        return ask_for_input(update, context)
-    return States.FIND_COMIC_BY_TITLE_BEGINNING.value
+    return _find_feature_by_name(
+        update,
+        context,
+        Route.COMICS,
+        "titleStartsWith",
+        CustomKeyboard.comics_menu,
+        States.FIND_COMIC_BY_TITLE_BEGINNING.value,
+    )
 
 
 def list_previous_comics_from_title_beginning(
@@ -716,107 +638,27 @@ def list_previous_events(update: Update, context: CallbackContext):
 
 
 def find_event_by_name(update: Update, context: CallbackContext):
-    logger.info("Find event by name ")
-
-    if (name := context.chat_data.get(DATA)) :
-        logger.info(f"name is {name}")
-        limit = 10
-        offset = context.chat_data.get(OFFSET, 0)
-
-        fetcher = context.bot_data[FETCHER]
-        fetched_data = fetcher.list_features(
-            Route.EVENTS, name=name, limit=limit, offset=offset,
-        )
-        logger.info(f"{limit + offset} and total {fetched_data.total}")
-        has_more_pages = limit + offset < fetched_data.total
-
-        events = fetched_data.features
-        context.chat_data[FEATURES] = events
-
-        sorted_events = sorted([event.name for event in events])
-        keyboard = CustomKeyboard.keyboard_from_iterable(
-            sorted_events, bool(offset), has_more_pages
-        )
-        text = Text.from_container(sorted_events)
-
-        if not keyboard:
-            keyboard = CustomKeyboard.events_menu
-
-            if DATA in context.chat_data:
-                del context.chat_data[DATA]
-            text = Text.not_found_by_name(name)
-            update.message.reply_text(text=text)
-            text = Text.events_menu
-
-        context.chat_data[OFFSET] = offset + min(limit, fetched_data.count)
-
-        if update.message:
-            update.message.reply_text(text=text, reply_markup=keyboard)
-        else:
-            update.callback_query.answer()
-            update.callback_query.edit_message_text(
-                text=text, reply_markup=keyboard
-            )
-    else:
-        context.chat_data[INPUT_FOR] = States.FIND_EVENT_BY_NAME.value
-        return ask_for_input(update, context)
-    return States.FIND_EVENT_BY_NAME.value
+    logger.info("Find event by name")
+    return _find_feature_by_name(
+        update,
+        context,
+        Route.EVENTS,
+        "name",
+        CustomKeyboard.events_menu,
+        States.FIND_EVENT_BY_NAME.value,
+    )
 
 
 def find_event_by_name_beginning(update: Update, context: CallbackContext):
-    logger.info("Find event by name beginning")
-
-    if (name_beginning := context.chat_data.get(DATA)) :
-        logger.info(f"name beginning is {name_beginning}")
-        limit = 10
-        offset = context.chat_data.get(OFFSET, 0)
-
-        fetcher = context.bot_data[FETCHER]
-        fetched_data = fetcher.list_features(
-            Route.EVENTS,
-            nameStartsWith=name_beginning,
-            limit=limit,
-            offset=offset,
-        )
-        logger.info(f"{limit + offset} and total {fetched_data.total}")
-        has_more_pages = limit + offset < fetched_data.total
-
-        events = fetched_data.features
-        context.chat_data[FEATURES] = events
-
-        sorted_events = sorted([event.name for event in events])
-        keyboard = CustomKeyboard.keyboard_from_iterable(
-            sorted_events, bool(offset), has_more_pages
-        )
-        text = Text.from_container(sorted_events)
-
-        if not keyboard:
-            if DATA in context.chat_data:
-                del context.chat_data[DATA]
-            keyboard = CustomKeyboard.events_menu
-            text = Text.not_found_by_name_beginning(name_beginning)
-            if update.message:
-                update.message.reply_text(text=text)
-            else:
-                update.callback_query.answer()
-                update.callback_query.edit_message_text(text=text)
-            text = Text.events_menu
-
-        context.chat_data[OFFSET] = offset + min(limit, fetched_data.count)
-
-        if update.message:
-            update.message.reply_text(text=text, reply_markup=keyboard)
-        else:
-            update.callback_query.answer()
-            update.callback_query.edit_message_text(
-                text=text, reply_markup=keyboard
-            )
-    else:
-        context.chat_data[
-            INPUT_FOR
-        ] = States.FIND_EVENT_BY_NAME_BEGINNING.value
-        return ask_for_input(update, context)
-    return States.FIND_EVENT_BY_NAME_BEGINNING.value
+    logger.info("Find character by name beginning")
+    return _find_feature_by_name(
+        update,
+        context,
+        Route.EVENTS,
+        "nameStartsWith",
+        CustomKeyboard.events_menu,
+        States.FIND_EVENT_BY_NAME_BEGINNING.value,
+    )
 
 
 def list_previous_events_from_name_beginning(
@@ -843,110 +685,27 @@ def list_previous_series(update: Update, context: CallbackContext):
 
 
 def find_series_by_title(update: Update, context: CallbackContext):
-    logger.info("Find series by title ")
-
-    if (title := context.chat_data.get(DATA)) :
-        logger.info(f"title is {title}")
-        limit = 10
-        offset = context.chat_data.get(OFFSET, 0)
-
-        fetcher = context.bot_data[FETCHER]
-        fetched_data = fetcher.list_features(
-            Route.SERIES, title=title, limit=limit, offset=offset,
-        )
-        logger.info(f"{limit + offset} and total {fetched_data.total}")
-        has_more_pages = limit + offset < fetched_data.total
-
-        series = fetched_data.features
-        context.chat_data[FEATURES] = series
-
-        sorted_series = sorted(
-            [single_series.title for single_series in series]
-        )
-        keyboard = CustomKeyboard.keyboard_from_iterable(
-            sorted_series, bool(offset), has_more_pages
-        )
-        text = Text.from_container(sorted_series)
-        if not keyboard:
-            keyboard = CustomKeyboard.series_menu
-            if DATA in context.chat_data:
-                del context.chat_data[DATA]
-            text = Text.not_found_by_name(title)
-            update.message.reply_text(text=text)
-            text = Text.series_menu
-
-        context.chat_data[OFFSET] = offset + min(limit, fetched_data.count)
-
-        if update.message:
-            update.message.reply_text(text=text, reply_markup=keyboard)
-        else:
-            update.callback_query.answer()
-            update.callback_query.edit_message_text(
-                text=text, reply_markup=keyboard
-            )
-    else:
-        context.chat_data[INPUT_FOR] = States.FIND_SERIES_BY_TITLE.value
-        return ask_for_input(update, context)
-    return States.FIND_SERIES_BY_TITLE.value
+    logger.info("Find series by title")
+    return _find_feature_by_name(
+        update,
+        context,
+        Route.SERIES,
+        "title",
+        CustomKeyboard.series_menu,
+        States.FIND_SERIES_BY_TITLE.value,
+    )
 
 
 def find_series_by_title_beginning(update: Update, context: CallbackContext):
     logger.info("Find series by title beginning")
-
-    if (title_beginning := context.chat_data.get(DATA)) :
-        logger.info(f"title beginning is {title_beginning}")
-        limit = 10
-        offset = context.chat_data.get(OFFSET, 0)
-
-        fetcher = context.bot_data[FETCHER]
-        fetched_data = fetcher.list_features(
-            Route.SERIES,
-            titleStartsWith=title_beginning,
-            limit=limit,
-            offset=offset,
-        )
-        logger.info(f"{limit + offset} and total {fetched_data.total}")
-        has_more_pages = limit + offset < fetched_data.total
-
-        series = fetched_data.features
-        context.chat_data[FEATURES] = series
-
-        sorted_series = sorted(
-            [single_series.title for single_series in series]
-        )
-        keyboard = CustomKeyboard.keyboard_from_iterable(
-            sorted_series, bool(offset), has_more_pages
-        )
-        text = Text.from_container(sorted_series)
-
-        if not keyboard:
-            keyboard = CustomKeyboard.series_menu
-            if DATA in context.chat_data:
-                del context.chat_data[DATA]
-
-            text = Text.not_found_by_name_beginning(title_beginning)
-            if update.message:
-                update.message.reply_text(text=text)
-            else:
-                update.callback_query.answer()
-                update.callback_query.edit_message_text(text=text)
-            text = Text.series_menu
-
-        context.chat_data[OFFSET] = offset + min(limit, fetched_data.count)
-
-        if update.message:
-            update.message.reply_text(text=text, reply_markup=keyboard)
-        else:
-            update.callback_query.answer()
-            update.callback_query.edit_message_text(
-                text=text, reply_markup=keyboard
-            )
-    else:
-        context.chat_data[
-            INPUT_FOR
-        ] = States.FIND_SERIES_BY_TITLE_BEGINNING.value
-        return ask_for_input(update, context)
-    return States.FIND_SERIES_BY_TITLE_BEGINNING.value
+    return _find_feature_by_name(
+        update,
+        context,
+        Route.SERIES,
+        "titleStartsWith",
+        CustomKeyboard.series_menu,
+        States.FIND_SERIES_BY_TITLE_BEGINNING.value,
+    )
 
 
 def list_previous_series_from_title_beginning(
@@ -1079,6 +838,17 @@ def main(bot_token, fetcher) -> None:
                 ),
                 CallbackQueryHandler(
                     characters_menu, pattern="^" + States.BACK.value + "$"
+                ),
+                CallbackQueryHandler(
+                    find_character_by_name,
+                    pattern="^" + States.NEXT_PAGE.value + "$",
+                ),
+                CallbackQueryHandler(
+                    list_previous_characters_from_name,
+                    pattern="^" + States.PREV_PAGE.value + "$",
+                ),
+                CallbackQueryHandler(
+                    Display.send_character, pattern="^(?!-1).+$",
                 ),
             ],
             States.FIND_CHARACTER_BY_NAME_BEGINNING.value: [
