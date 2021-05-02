@@ -475,23 +475,22 @@ def list_characters(update: Update, context: CallbackContext):
     return States.LIST_CHARACTERS.value
 
 
-def list_previous_characters(update: Update, context: CallbackContext):
+def _list_previous_features(update: Update, context: CallbackContext):
     limit = 10
     current_offset = context.chat_data[OFFSET]
     subtract_value = limit + (current_offset % 10 or limit)
-
     context.chat_data[OFFSET] -= subtract_value
+
+
+def list_previous_characters(update: Update, context: CallbackContext):
+    _list_previous_features(update, context)
     return list_characters(update, context)
 
 
 def list_previous_characters_from_name_beginning(
     update: Update, context: CallbackContext
 ):
-    limit = 10
-    current_offset = context.chat_data[OFFSET]
-    subtract_value = limit + (current_offset % 10 or limit)
-
-    context.chat_data[OFFSET] -= subtract_value
+    _list_previous_features(update, context)
     return find_character_by_name_beginning(update, context)
 
 
@@ -583,11 +582,7 @@ def list_comics(update: Update, context: CallbackContext):
 
 
 def list_previous_comics(update: Update, context: CallbackContext):
-    limit = 10
-    current_offset = context.chat_data[OFFSET]
-    subtract_value = limit + (current_offset % 10 or limit)
-
-    context.chat_data[OFFSET] -= subtract_value
+    _list_previous_features(update, context)
     return list_comics(update, context)
 
 
@@ -700,20 +695,12 @@ def find_comic_by_title_beginning(update: Update, context: CallbackContext):
 def list_previous_comics_from_title_beginning(
     update: Update, context: CallbackContext
 ):
-    limit = 10
-    current_offset = context.chat_data[OFFSET]
-    subtract_value = limit + (current_offset % 10 or limit)
-
-    context.chat_data[OFFSET] -= subtract_value
+    _list_previous_features(update, context)
     return find_comic_by_title_beginning(update, context)
 
 
 def list_previous_comics_from_title(update: Update, context: CallbackContext):
-    limit = 10
-    current_offset = context.chat_data[OFFSET]
-    subtract_value = limit + (current_offset % 10 or limit)
-
-    context.chat_data[OFFSET] -= subtract_value
+    _list_previous_features(update, context)
     return find_comic_by_title(update, context)
 
 
@@ -724,11 +711,7 @@ def list_events(update: Update, context: CallbackContext):
 
 
 def list_previous_events(update: Update, context: CallbackContext):
-    limit = 10
-    current_offset = context.chat_data[OFFSET]
-    subtract_value = limit + (current_offset % 10 or limit)
-
-    context.chat_data[OFFSET] -= subtract_value
+    _list_previous_features(update, context)
     return list_events(update, context)
 
 
@@ -839,20 +822,12 @@ def find_event_by_name_beginning(update: Update, context: CallbackContext):
 def list_previous_events_from_name_beginning(
     update: Update, context: CallbackContext
 ):
-    limit = 10
-    current_offset = context.chat_data[OFFSET]
-    subtract_value = limit + (current_offset % 10 or limit)
-
-    context.chat_data[OFFSET] -= subtract_value
+    _list_previous_features(update, context)
     return find_event_by_name_beginning(update, context)
 
 
 def list_previous_events_from_name(update: Update, context: CallbackContext):
-    limit = 10
-    current_offset = context.chat_data[OFFSET]
-    subtract_value = limit + (current_offset % 10 or limit)
-
-    context.chat_data[OFFSET] -= subtract_value
+    _list_previous_features(update, context)
     return find_event_by_name(update, context)
 
 
@@ -863,11 +838,7 @@ def list_series(update: Update, context: CallbackContext):
 
 
 def list_previous_series(update: Update, context: CallbackContext):
-    limit = 10
-    current_offset = context.chat_data[OFFSET]
-    subtract_value = limit + (current_offset % 10 or limit)
-
-    context.chat_data[OFFSET] -= subtract_value
+    _list_previous_features(update, context)
     return list_series(update, context)
 
 
@@ -981,20 +952,12 @@ def find_series_by_title_beginning(update: Update, context: CallbackContext):
 def list_previous_series_from_title_beginning(
     update: Update, context: CallbackContext
 ):
-    limit = 10
-    current_offset = context.chat_data[OFFSET]
-    subtract_value = limit + (current_offset % 10 or limit)
-
-    context.chat_data[OFFSET] -= subtract_value
+    _list_previous_features(update, context)
     return find_series_by_title_beginning(update, context)
 
 
 def list_previous_series_from_title(update: Update, context: CallbackContext):
-    limit = 10
-    current_offset = context.chat_data[OFFSET]
-    subtract_value = limit + (current_offset % 10 or limit)
-
-    context.chat_data[OFFSET] -= subtract_value
+    _list_previous_features(update, context)
     return find_series_by_title_beginning(update, context)
 
 
