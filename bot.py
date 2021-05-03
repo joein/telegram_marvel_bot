@@ -1,5 +1,3 @@
-import logging
-
 from telegram.ext import (
     Updater,
     CommandHandler,
@@ -13,12 +11,6 @@ from fetcher import Fetcher
 from constants import FETCHER
 from base_handlers import MiscHandler
 from conv_handler_builder import ConversationHandlerBuilder
-
-logging.basicConfig(
-    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-    level=logging.INFO,
-)
-logger = logging.getLogger(__name__)
 
 
 def main(bot_token, fetcher_) -> None:
