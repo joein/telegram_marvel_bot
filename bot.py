@@ -729,23 +729,14 @@ def select_feature(feature, update: Update, context: CallbackContext):
 
 
 def save_input(update: Update, context: CallbackContext) -> str:
-    logger.info("save input")
-    """Save input for feature and return to feature selection."""
     context.chat_data[DATA] = update.message.text
-
-    logger.info("return select feature")
-    logger.info(f"input for {context.chat_data[INPUT_FOR]}")
     return select_feature(context.chat_data[INPUT_FOR], update, context)
 
 
 def ask_for_input(update: Update, context: CallbackContext) -> str:
-    logger.info("ask for input")
-    """Prompt user to input data for selected feature."""
     context.chat_data[DATA] = update.callback_query.data
-    text = Text.ask_for_input
     update.callback_query.answer()
-    update.callback_query.edit_message_text(text=text)
-    logger.info("return typing")
+    update.callback_query.edit_message_text(text=Text.ask_for_input)
     return States.ASK_FOR_INPUT.value
 
 
@@ -767,458 +758,222 @@ def end(update: Update, _: CallbackContext):
     return States.END.value
 
 
-def main(bot_token, fetcher) -> None:
+def _build_inner_conversation_handler(
+    entrypoint_map, state_pattern_handler_maps
+):
+    _callback_query_handlers = {
+        state: _handlers_from_dict(pattern_handler_map)
+        for state, pattern_handler_map in state_pattern_handler_maps.items()
+    }
+    handler = ConversationHandler(
+        entry_points=_handlers_from_dict(entrypoint_map),
+        states={
+            States.ASK_FOR_INPUT.value: [
+                MessageHandler(Filters.text & ~Filters.command, save_input),
+            ],
+            **_callback_query_handlers,
+        },
+        fallbacks=[
+            CommandHandler("stop", stop),
+            CallbackQueryHandler(
+                end_second_level, pattern=f"^{States.END.value}$"
+            ),
+        ],
+        map_to_parent={
+            States.END.value: States.MENU.value,
+            States.STOPPING.value: States.END.value,
+        },
+    )
+    return handler
+
+
+def _handlers_from_dict(pattern_handler_map):
+    return [
+        CallbackQueryHandler(handler, pattern=pattern)
+        for pattern, handler in pattern_handler_map.items()
+    ]
+
+
+def get_characters_conversation_handler():
+    menu_map = {
+        f"^{States.LIST_CHARACTERS.value}$": list_characters,
+        f"^{States.FIND_CHARACTER_BY_NAME.value}$": find_character_by_name,
+        f"^{States.FIND_CHARACTER_BY_NAME_BEGINNING.value}$": find_character_by_name_beginning,
+    }
+    back_map = {f"^{States.BACK.value}$": characters_menu}
+    send_map = {
+        f"^(?!{States.END.value}).+$": Display.send_character,
+    }
+    list_characters_map = {
+        **back_map,
+        f"^{States.NEXT_PAGE.value}$": list_characters,
+        f"^{States.PREV_PAGE.value}$": list_previous_characters,
+        **send_map,
+    }
+    find_character_by_name_map = {
+        **menu_map,
+        **back_map,
+        f"^{States.NEXT_PAGE.value}$": find_character_by_name,
+        f"^{States.PREV_PAGE.value}$": list_previous_characters_from_name,
+        **send_map,
+    }
+    find_character_by_name_beginning_map = {
+        **menu_map,
+        **back_map,
+        f"^{States.NEXT_PAGE.value}$": find_character_by_name_beginning,
+        f"^{States.PREV_PAGE.value}$": list_previous_characters_from_name_beginning,
+        **send_map,
+    }
+
+    return _build_inner_conversation_handler(
+        {f"^{States.CHARACTERS.value}$": characters_menu},
+        {
+            States.CHARACTERS.value: menu_map,
+            States.LIST_CHARACTERS.value: list_characters_map,
+            States.FIND_CHARACTER_BY_NAME.value: find_character_by_name_map,
+            States.FIND_CHARACTER_BY_NAME_BEGINNING.value: find_character_by_name_beginning_map,
+        },
+    )
+
+
+def get_comics_conversation_handler():
+    menu_map = {
+        f"^{States.LIST_COMICS.value}$": list_comics,
+        f"^{States.FIND_COMIC_BY_TITLE.value}$": find_comic_by_title,
+        f"^{States.FIND_COMIC_BY_TITLE_BEGINNING.value}$": find_comic_by_title_beginning,
+    }
+    back_map = {
+        f"^{States.BACK.value}$": comics_menu,
+    }
+    send_map = {
+        f"^(?!{States.END.value}).+$": Display.send_comic,
+    }
+    list_comics_map = {
+        **back_map,
+        f"^{States.NEXT_PAGE.value}$": list_comics,
+        f"^{States.PREV_PAGE.value}$": list_previous_comics,
+        **send_map,
+    }
+    find_comic_by_title_map = {
+        **menu_map,
+        **back_map,
+        f"^{States.NEXT_PAGE.value}$": find_comic_by_title,
+        f"^{States.PREV_PAGE.value}$": list_previous_comics_from_title,
+        **send_map,
+    }
+    find_comic_by_title_beginning_map = {
+        **menu_map,
+        **back_map,
+        f"^{States.NEXT_PAGE.value}$": find_comic_by_title_beginning,
+        f"^{States.PREV_PAGE.value}$": list_previous_comics_from_title_beginning,
+        **send_map,
+    }
+    return _build_inner_conversation_handler(
+        {f"^{States.COMICS.value}$": comics_menu},
+        {
+            States.COMICS.value: menu_map,
+            States.LIST_COMICS.value: list_comics_map,
+            States.FIND_COMIC_BY_TITLE.value: find_comic_by_title_map,
+            States.FIND_COMIC_BY_TITLE_BEGINNING.value: find_comic_by_title_beginning_map,
+        },
+    )
+
+
+def get_events_conversation_handler():
+    menu_map = {
+        f"^{States.LIST_EVENTS.value}$": list_events,
+        f"^{States.FIND_EVENT_BY_NAME.value}$": find_event_by_name,
+        f"^{States.FIND_EVENT_BY_NAME_BEGINNING.value}$": find_event_by_name_beginning,
+    }
+    back_map = {
+        f"^{States.BACK.value}$": events_menu,
+    }
+    send_map = {
+        f"^(?!{States.END.value}).+$": Display.send_event,
+    }
+    list_events_map = {
+        **back_map,
+        f"^{States.NEXT_PAGE.value}$": list_events,
+        f"^{States.PREV_PAGE.value}$": list_previous_events,
+        **send_map,
+    }
+    find_event_by_name_map = {
+        **menu_map,
+        **back_map,
+        f"^{States.NEXT_PAGE.value}$": find_event_by_name,
+        f"^{States.PREV_PAGE.value}$": list_previous_events_from_name,
+        **send_map,
+    }
+    find_event_by_name_beginning_map = {
+        **menu_map,
+        **back_map,
+        f"^{States.NEXT_PAGE.value}$": find_event_by_name_beginning,
+        f"^{States.PREV_PAGE.value}$": list_previous_events_from_name_beginning,
+        **send_map,
+    }
+    return _build_inner_conversation_handler(
+        {f"^{States.EVENTS.value}$": events_menu},
+        {
+            States.EVENTS.value: menu_map,
+            States.LIST_EVENTS.value: list_events_map,
+            States.FIND_EVENT_BY_NAME.value: find_event_by_name_map,
+            States.FIND_EVENT_BY_NAME_BEGINNING.value: find_event_by_name_beginning_map,
+        },
+    )
+
+
+def get_series_conversation_handler():
+    menu_map = {
+        f"^{States.LIST_SERIES.value}$": list_series,
+        f"^{States.FIND_SERIES_BY_TITLE.value}$": find_series_by_title,
+        f"^{States.FIND_SERIES_BY_TITLE_BEGINNING.value}$": find_series_by_title_beginning,
+    }
+    back_map = {
+        f"^{States.BACK.value}$": series_menu,
+    }
+    send_map = {
+        f"^(?!{States.END.value}).+$": Display.send_series,
+    }
+    list_series_map = {
+        **back_map,
+        f"^{States.NEXT_PAGE.value}$": list_series,
+        f"^{States.PREV_PAGE.value}$": list_previous_series,
+        **send_map,
+    }
+    find_series_by_title_map = {
+        **menu_map,
+        **back_map,
+        f"^{States.NEXT_PAGE.value}$": find_series_by_title,
+        f"^{States.PREV_PAGE.value}$": list_previous_series_from_title,
+        **send_map,
+    }
+    find_series_by_title_beginning_map = {
+        **menu_map,
+        **back_map,
+        f"^{States.NEXT_PAGE.value}$": find_series_by_title,
+        f"^{States.PREV_PAGE.value}$": list_previous_series_from_title_beginning,
+        **send_map,
+    }
+    return _build_inner_conversation_handler(
+        {f"^{States.SERIES.value}$": series_menu},
+        {
+            States.SERIES.value: menu_map,
+            States.LIST_SERIES.value: list_series_map,
+            States.FIND_SERIES_BY_TITLE.value: find_series_by_title_map,
+            States.FIND_SERIES_BY_TITLE_BEGINNING.value: find_series_by_title_beginning_map,
+        },
+    )
+
+
+def main(bot_token, fetcher_) -> None:
     updater = Updater(bot_token)
     dispatcher = updater.dispatcher
-    dispatcher.bot_data[FETCHER] = fetcher
+    dispatcher.bot_data[FETCHER] = fetcher_
 
-    characters_conv = ConversationHandler(
-        entry_points=[
-            CallbackQueryHandler(
-                characters_menu, pattern="^" + States.CHARACTERS.value + "$"
-            )
-        ],
-        states={
-            States.CHARACTERS.value: [
-                CallbackQueryHandler(
-                    list_characters,
-                    pattern="^" + States.LIST_CHARACTERS.value + "$",
-                ),
-                CallbackQueryHandler(
-                    find_character_by_name,
-                    pattern="^" + States.FIND_CHARACTER_BY_NAME.value + "$",
-                ),
-                CallbackQueryHandler(
-                    find_character_by_name_beginning,
-                    pattern="^"
-                    + States.FIND_CHARACTER_BY_NAME_BEGINNING.value
-                    + "$",
-                ),
-            ],
-            States.ASK_FOR_INPUT.value: [
-                MessageHandler(Filters.text & ~Filters.command, save_input),
-            ],
-            States.LIST_CHARACTERS.value: [
-                CallbackQueryHandler(
-                    characters_menu, pattern="^" + States.BACK.value + "$"
-                ),
-                CallbackQueryHandler(
-                    list_characters,
-                    pattern="^" + States.NEXT_PAGE.value + "$",
-                ),
-                CallbackQueryHandler(
-                    list_previous_characters,
-                    pattern="^" + States.PREV_PAGE.value + "$",
-                ),
-                CallbackQueryHandler(
-                    Display.send_character, pattern="^(?!-1).+$",
-                ),
-            ],
-            States.FIND_CHARACTER_BY_NAME.value: [
-                CallbackQueryHandler(
-                    find_character_by_name,
-                    pattern="^" + States.FIND_CHARACTER_BY_NAME.value + "$",
-                ),
-                CallbackQueryHandler(
-                    find_character_by_name_beginning,
-                    pattern="^"
-                    + States.FIND_CHARACTER_BY_NAME_BEGINNING.value
-                    + "$",
-                ),
-                CallbackQueryHandler(
-                    list_characters,
-                    pattern="^" + States.LIST_CHARACTERS.value + "$",
-                ),
-                CallbackQueryHandler(
-                    characters_menu, pattern="^" + States.BACK.value + "$"
-                ),
-                CallbackQueryHandler(
-                    find_character_by_name,
-                    pattern="^" + States.NEXT_PAGE.value + "$",
-                ),
-                CallbackQueryHandler(
-                    list_previous_characters_from_name,
-                    pattern="^" + States.PREV_PAGE.value + "$",
-                ),
-                CallbackQueryHandler(
-                    Display.send_character, pattern="^(?!-1).+$",
-                ),
-            ],
-            States.FIND_CHARACTER_BY_NAME_BEGINNING.value: [
-                CallbackQueryHandler(
-                    find_character_by_name,
-                    pattern="^" + States.FIND_CHARACTER_BY_NAME.value + "$",
-                ),
-                CallbackQueryHandler(
-                    find_character_by_name_beginning,
-                    pattern="^"
-                    + States.FIND_CHARACTER_BY_NAME_BEGINNING.value
-                    + "$",
-                ),
-                CallbackQueryHandler(
-                    list_characters,
-                    pattern="^" + States.LIST_CHARACTERS.value + "$",
-                ),
-                CallbackQueryHandler(
-                    characters_menu, pattern="^" + States.BACK.value + "$"
-                ),
-                CallbackQueryHandler(
-                    find_character_by_name_beginning,
-                    pattern="^" + States.NEXT_PAGE.value + "$",
-                ),
-                CallbackQueryHandler(
-                    list_previous_characters_from_name_beginning,
-                    pattern="^" + States.PREV_PAGE.value + "$",
-                ),
-                CallbackQueryHandler(
-                    Display.send_character, pattern="^(?!-1).+$",
-                ),
-            ],
-        },
-        fallbacks=[
-            CommandHandler("stop", stop),
-            CallbackQueryHandler(
-                end_second_level, pattern="^" + str(States.END.value) + "$"
-            ),
-        ],
-        map_to_parent={
-            States.END.value: States.MENU.value,
-            States.STOPPING.value: States.END.value,
-        },
-    )
-
-    comics_conv = ConversationHandler(
-        entry_points=[
-            CallbackQueryHandler(
-                comics_menu, pattern="^" + States.COMICS.value + "$"
-            )
-        ],
-        states={
-            States.COMICS.value: [
-                CallbackQueryHandler(
-                    list_comics, pattern="^" + States.LIST_COMICS.value + "$",
-                ),
-                CallbackQueryHandler(
-                    find_comic_by_title,
-                    pattern="^" + States.FIND_COMIC_BY_TITLE.value + "$",
-                ),
-                CallbackQueryHandler(
-                    find_comic_by_title_beginning,
-                    pattern="^"
-                    + States.FIND_COMIC_BY_TITLE_BEGINNING.value
-                    + "$",
-                ),
-            ],
-            States.ASK_FOR_INPUT.value: [
-                MessageHandler(Filters.text & ~Filters.command, save_input),
-            ],
-            States.LIST_COMICS.value: [
-                CallbackQueryHandler(
-                    comics_menu, pattern="^" + States.BACK.value + "$"
-                ),
-                CallbackQueryHandler(
-                    list_comics, pattern="^" + States.NEXT_PAGE.value + "$",
-                ),
-                CallbackQueryHandler(
-                    list_previous_comics,
-                    pattern="^" + States.PREV_PAGE.value + "$",
-                ),
-                CallbackQueryHandler(
-                    Display.send_comic, pattern="^(?!-1).+$",
-                ),
-            ],
-            States.FIND_COMIC_BY_TITLE.value: [
-                CallbackQueryHandler(
-                    find_comic_by_title,
-                    pattern="^" + States.FIND_COMIC_BY_TITLE.value + "$",
-                ),
-                CallbackQueryHandler(
-                    find_comic_by_title_beginning,
-                    pattern="^"
-                    + States.FIND_COMIC_BY_TITLE_BEGINNING.value
-                    + "$",
-                ),
-                CallbackQueryHandler(
-                    list_comics, pattern="^" + States.LIST_COMICS.value + "$"
-                ),
-                CallbackQueryHandler(
-                    comics_menu, pattern="^" + States.BACK.value + "$"
-                ),
-                CallbackQueryHandler(
-                    find_comic_by_title,
-                    pattern="^" + States.NEXT_PAGE.value + "$",
-                ),
-                CallbackQueryHandler(
-                    list_previous_comics_from_title,
-                    pattern="^" + States.PREV_PAGE.value + "$",
-                ),
-                CallbackQueryHandler(
-                    Display.send_comic, pattern="^(?!-1).+$",
-                ),
-            ],
-            States.FIND_COMIC_BY_TITLE_BEGINNING.value: [
-                CallbackQueryHandler(
-                    find_comic_by_title,
-                    pattern="^" + States.FIND_COMIC_BY_TITLE.value + "$",
-                ),
-                CallbackQueryHandler(
-                    find_comic_by_title_beginning,
-                    pattern="^"
-                    + States.FIND_COMIC_BY_TITLE_BEGINNING.value
-                    + "$",
-                ),
-                CallbackQueryHandler(
-                    list_comics, pattern="^" + States.LIST_COMICS.value + "$"
-                ),
-                CallbackQueryHandler(
-                    comics_menu, pattern="^" + States.BACK.value + "$"
-                ),
-                CallbackQueryHandler(
-                    find_comic_by_title_beginning,
-                    pattern="^" + States.NEXT_PAGE.value + "$",
-                ),
-                CallbackQueryHandler(
-                    list_previous_comics_from_title_beginning,
-                    pattern="^" + States.PREV_PAGE.value + "$",
-                ),
-                CallbackQueryHandler(
-                    Display.send_comic, pattern="^(?!-1).+$",
-                ),
-            ],
-        },
-        fallbacks=[
-            CommandHandler("stop", stop),
-            CallbackQueryHandler(
-                end_second_level, pattern="^" + str(States.END.value) + "$"
-            ),
-        ],
-        map_to_parent={
-            States.END.value: States.MENU.value,
-            States.STOPPING.value: States.END.value,
-        },
-    )
-
-    events_conv = ConversationHandler(
-        entry_points=[
-            CallbackQueryHandler(
-                events_menu, pattern="^" + States.EVENTS.value + "$"
-            )
-        ],
-        states={
-            States.EVENTS.value: [
-                CallbackQueryHandler(
-                    list_events, pattern="^" + States.LIST_EVENTS.value + "$",
-                ),
-                CallbackQueryHandler(
-                    find_event_by_name,
-                    pattern="^" + States.FIND_EVENT_BY_NAME.value + "$",
-                ),
-                CallbackQueryHandler(
-                    find_event_by_name_beginning,
-                    pattern="^"
-                    + States.FIND_EVENT_BY_NAME_BEGINNING.value
-                    + "$",
-                ),
-            ],
-            States.ASK_FOR_INPUT.value: [
-                MessageHandler(Filters.text & ~Filters.command, save_input),
-            ],
-            States.LIST_EVENTS.value: [
-                CallbackQueryHandler(
-                    events_menu, pattern="^" + States.BACK.value + "$"
-                ),
-                CallbackQueryHandler(
-                    list_events, pattern="^" + States.NEXT_PAGE.value + "$",
-                ),
-                CallbackQueryHandler(
-                    list_previous_events,
-                    pattern="^" + States.PREV_PAGE.value + "$",
-                ),
-                CallbackQueryHandler(
-                    Display.send_event, pattern="^(?!-1).+$",
-                ),
-            ],
-            States.FIND_EVENT_BY_NAME.value: [
-                CallbackQueryHandler(
-                    find_event_by_name,
-                    pattern="^" + States.FIND_EVENT_BY_NAME.value + "$",
-                ),
-                CallbackQueryHandler(
-                    find_event_by_name_beginning,
-                    pattern="^"
-                    + States.FIND_EVENT_BY_NAME_BEGINNING.value
-                    + "$",
-                ),
-                CallbackQueryHandler(
-                    list_events, pattern="^" + States.LIST_EVENTS.value + "$"
-                ),
-                CallbackQueryHandler(
-                    events_menu, pattern="^" + States.BACK.value + "$"
-                ),
-                CallbackQueryHandler(
-                    find_event_by_name,
-                    pattern="^" + States.NEXT_PAGE.value + "$",
-                ),
-                CallbackQueryHandler(
-                    list_previous_events_from_name,
-                    pattern="^" + States.PREV_PAGE.value + "$",
-                ),
-                CallbackQueryHandler(
-                    Display.send_event, pattern="^(?!-1).+$",
-                ),
-            ],
-            States.FIND_EVENT_BY_NAME_BEGINNING.value: [
-                CallbackQueryHandler(
-                    find_event_by_name,
-                    pattern="^" + States.FIND_EVENT_BY_NAME.value + "$",
-                ),
-                CallbackQueryHandler(
-                    find_event_by_name_beginning,
-                    pattern="^"
-                    + States.FIND_EVENT_BY_NAME_BEGINNING.value
-                    + "$",
-                ),
-                CallbackQueryHandler(
-                    list_events, pattern="^" + States.LIST_EVENTS.value + "$"
-                ),
-                CallbackQueryHandler(
-                    events_menu, pattern="^" + States.BACK.value + "$"
-                ),
-                CallbackQueryHandler(
-                    find_event_by_name_beginning,
-                    pattern="^" + States.NEXT_PAGE.value + "$",
-                ),
-                CallbackQueryHandler(
-                    list_previous_events_from_name_beginning,
-                    pattern="^" + States.PREV_PAGE.value + "$",
-                ),
-                CallbackQueryHandler(
-                    Display.send_event, pattern="^(?!-1).+$",
-                ),
-            ],
-        },
-        fallbacks=[
-            CommandHandler("stop", stop),
-            CallbackQueryHandler(
-                end_second_level, pattern="^" + str(States.END.value) + "$"
-            ),
-        ],
-        map_to_parent={
-            States.END.value: States.MENU.value,
-            States.STOPPING.value: States.END.value,
-        },
-    )
-
-    series_conv = ConversationHandler(
-        entry_points=[
-            CallbackQueryHandler(
-                series_menu, pattern="^" + States.SERIES.value + "$"
-            )
-        ],
-        states={
-            States.SERIES.value: [
-                CallbackQueryHandler(
-                    list_series, pattern="^" + States.LIST_SERIES.value + "$",
-                ),
-                CallbackQueryHandler(
-                    find_series_by_title,
-                    pattern="^" + States.FIND_SERIES_BY_TITLE.value + "$",
-                ),
-                CallbackQueryHandler(
-                    find_series_by_title_beginning,
-                    pattern="^"
-                    + States.FIND_SERIES_BY_TITLE_BEGINNING.value
-                    + "$",
-                ),
-            ],
-            States.ASK_FOR_INPUT.value: [
-                MessageHandler(Filters.text & ~Filters.command, save_input),
-            ],
-            States.LIST_SERIES.value: [
-                CallbackQueryHandler(
-                    series_menu, pattern="^" + States.BACK.value + "$"
-                ),
-                CallbackQueryHandler(
-                    list_series, pattern="^" + States.NEXT_PAGE.value + "$",
-                ),
-                CallbackQueryHandler(
-                    list_previous_series,
-                    pattern="^" + States.PREV_PAGE.value + "$",
-                ),
-                CallbackQueryHandler(
-                    Display.send_series, pattern="^(?!-1).+$",
-                ),
-            ],
-            States.FIND_SERIES_BY_TITLE.value: [
-                CallbackQueryHandler(
-                    find_series_by_title,
-                    pattern="^" + States.FIND_SERIES_BY_TITLE.value + "$",
-                ),
-                CallbackQueryHandler(
-                    find_series_by_title_beginning,
-                    pattern="^"
-                    + States.FIND_SERIES_BY_TITLE_BEGINNING.value
-                    + "$",
-                ),
-                CallbackQueryHandler(
-                    list_series, pattern="^" + States.LIST_SERIES.value + "$"
-                ),
-                CallbackQueryHandler(
-                    series_menu, pattern="^" + States.BACK.value + "$"
-                ),
-                CallbackQueryHandler(
-                    find_series_by_title,
-                    pattern="^" + States.NEXT_PAGE.value + "$",
-                ),
-                CallbackQueryHandler(
-                    list_previous_series_from_title,
-                    pattern="^" + States.PREV_PAGE.value + "$",
-                ),
-                CallbackQueryHandler(
-                    Display.send_series, pattern="^(?!-1).+$",
-                ),
-            ],
-            States.FIND_SERIES_BY_TITLE_BEGINNING.value: [
-                CallbackQueryHandler(
-                    find_series_by_title,
-                    pattern="^" + States.FIND_SERIES_BY_TITLE.value + "$",
-                ),
-                CallbackQueryHandler(
-                    find_series_by_title_beginning,
-                    pattern="^"
-                    + States.FIND_SERIES_BY_TITLE_BEGINNING.value
-                    + "$",
-                ),
-                CallbackQueryHandler(
-                    list_series, pattern="^" + States.LIST_SERIES.value + "$"
-                ),
-                CallbackQueryHandler(
-                    series_menu, pattern="^" + States.BACK.value + "$"
-                ),
-                CallbackQueryHandler(
-                    find_series_by_title_beginning,
-                    pattern="^" + States.NEXT_PAGE.value + "$",
-                ),
-                CallbackQueryHandler(
-                    list_previous_series_from_title_beginning,
-                    pattern="^" + States.PREV_PAGE.value + "$",
-                ),
-                CallbackQueryHandler(
-                    Display.send_series, pattern="^(?!-1).+$",
-                ),
-            ],
-        },
-        fallbacks=[
-            CommandHandler("stop", stop),
-            CallbackQueryHandler(
-                end_second_level, pattern="^" + str(States.END.value) + "$"
-            ),
-        ],
-        map_to_parent={
-            States.END.value: States.MENU.value,
-            States.STOPPING.value: States.END.value,
-        },
-    )
+    characters_conv = get_characters_conversation_handler()
+    comics_conv = get_comics_conversation_handler()
+    events_conv = get_events_conversation_handler()
+    series_conv = get_series_conversation_handler()
 
     menu_handlers = [
         characters_conv,
