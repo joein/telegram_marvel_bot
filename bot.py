@@ -165,6 +165,8 @@ class _CustomKeyboard:
 
     @classmethod
     def keyboard_from_iterable(cls, iterable, prev_required, next_required):
+        if not iterable:
+            return None
         buttons = [
             [
                 InlineKeyboardButton(
@@ -250,11 +252,7 @@ class _Text:
 
     @staticmethod
     def not_found_by_name(name):
-        return f"Sorry, I didn't found anything for {name}. Maybe you should try find it by name beginning"
-
-    @staticmethod
-    def not_found_by_name_beginning(name_beginning):
-        return f"Sorry, I didn't found anything for {name_beginning}."
+        return f"Sorry, I didn't found anything for {name}."
 
     @staticmethod
     def from_container(container, sep="\n"):
@@ -440,11 +438,54 @@ def series_menu(update: Update, context: CallbackContext) -> str:
 
 
 def _list_features(update: Update, context: CallbackContext, route):
+    text, keyboard = _request_features(context, route)
+    update.callback_query.answer()
+    update.callback_query.edit_message_text(text=text, reply_markup=keyboard)
+
+
+def _find_feature_by_name(
+    update: Update,
+    context: CallbackContext,
+    route,
+    filter_key,
+    menu_keyboard,
+    menu_text,
+    return_state,
+):
+    if not (value := context.chat_data.get(DATA)):
+        context.chat_data[INPUT_FOR] = return_state
+        return ask_for_input(update, context)
+
+    text, keyboard = _request_features(context, route, **{filter_key: value})
+
+    if not keyboard:
+        keyboard = menu_keyboard
+
+        if DATA in context.chat_data:
+            del context.chat_data[DATA]
+        text = Text.not_found_by_name(value)
+        update.message.reply_text(text=text)
+        text = menu_text
+
+    if update.message:
+        update.message.reply_text(text=text, reply_markup=keyboard)
+    else:
+        update.callback_query.answer()
+        update.callback_query.edit_message_text(
+            text=text, reply_markup=keyboard
+        )
+
+    return return_state
+
+
+def _request_features(context, route, **kwargs):
     limit = 10
 
-    fetcher = context.bot_data[FETCHER]
+    fetcher_ = context.bot_data[FETCHER]
     offset = context.chat_data.get(OFFSET, 0)
-    fetched_data = fetcher.list_features(route, limit=limit, offset=offset)
+    fetched_data = fetcher_.list_features(
+        route, limit=limit, offset=offset, **kwargs
+    )
     logger.info(f"{limit + offset} and total {fetched_data.total}")
 
     has_more_pages = limit + offset < fetched_data.total
@@ -461,12 +502,10 @@ def _list_features(update: Update, context: CallbackContext, route):
     keyboard = CustomKeyboard.keyboard_from_iterable(
         sorted_features, bool(offset), has_more_pages
     )
-
-    update.callback_query.answer()
-    update.callback_query.edit_message_text(
-        text=Text.from_container(sorted_features), reply_markup=keyboard
-    )
+    text = Text.from_container(sorted_features)
     context.chat_data[OFFSET] = offset + min(limit, fetched_data.count)
+
+    return text, keyboard
 
 
 def list_characters(update: Update, context: CallbackContext):
@@ -475,7 +514,7 @@ def list_characters(update: Update, context: CallbackContext):
     return States.LIST_CHARACTERS.value
 
 
-def _list_previous_features(update: Update, context: CallbackContext):
+def _list_previous_features(context: CallbackContext):
     limit = 10
     current_offset = context.chat_data[OFFSET]
     subtract_value = limit + (current_offset % 10 or limit)
@@ -483,76 +522,22 @@ def _list_previous_features(update: Update, context: CallbackContext):
 
 
 def list_previous_characters(update: Update, context: CallbackContext):
-    _list_previous_features(update, context)
+    _list_previous_features(context)
     return list_characters(update, context)
 
 
 def list_previous_characters_from_name(
     update: Update, context: CallbackContext
 ):
-    _list_previous_features(update, context)
+    _list_previous_features(context)
     return find_character_by_name(update, context)
 
 
 def list_previous_characters_from_name_beginning(
     update: Update, context: CallbackContext
 ):
-    _list_previous_features(update, context)
+    _list_previous_features(context)
     return find_character_by_name_beginning(update, context)
-
-
-def _find_feature_by_name(
-    update: Update,
-    context: CallbackContext,
-    route,
-    filter_key,
-    menu_keyboard,
-    return_state,
-):
-    if not (value := context.chat_data.get(DATA)):
-        context.chat_data[INPUT_FOR] = return_state
-        return ask_for_input(update, context)
-
-    limit = 10
-    offset = context.chat_data.get(OFFSET, 0)
-    fetcher = context.bot_data[FETCHER]
-    fetched_data = fetcher.list_features(
-        route, **{filter_key: value, "limit": limit, "offset": offset}
-    )
-    has_more_pages = limit + offset < fetched_data.total
-    features = fetched_data.features
-    context.chat_data[FEATURES] = features
-    sorted_features = sorted(
-        [
-            getattr(feature, "name", getattr(feature, "title", ""))
-            for feature in features
-        ]
-    )
-    keyboard = CustomKeyboard.keyboard_from_iterable(
-        sorted_features, bool(offset), has_more_pages
-    )
-    text = Text.from_container(sorted_features)
-
-    if not keyboard:
-        keyboard = menu_keyboard
-
-        if DATA in context.chat_data:
-            del context.chat_data[DATA]
-        text = Text.not_found_by_name(value)
-        update.message.reply_text(text=text)
-        text = Text.characters_menu
-
-    context.chat_data[OFFSET] = offset + min(limit, fetched_data.count)
-
-    if update.message:
-        update.message.reply_text(text=text, reply_markup=keyboard)
-    else:
-        update.callback_query.answer()
-        update.callback_query.edit_message_text(
-            text=text, reply_markup=keyboard
-        )
-
-    return return_state
 
 
 def find_character_by_name(update: Update, context: CallbackContext):
@@ -563,6 +548,7 @@ def find_character_by_name(update: Update, context: CallbackContext):
         Route.CHARACTERS,
         "name",
         CustomKeyboard.characters_menu,
+        Text.characters_menu,
         States.FIND_CHARACTER_BY_NAME.value,
     )
 
@@ -575,6 +561,7 @@ def find_character_by_name_beginning(update: Update, context: CallbackContext):
         Route.CHARACTERS,
         "nameStartsWith",
         CustomKeyboard.characters_menu,
+        Text.characters_menu,
         States.FIND_CHARACTER_BY_NAME_BEGINNING.value,
     )
 
@@ -586,7 +573,7 @@ def list_comics(update: Update, context: CallbackContext):
 
 
 def list_previous_comics(update: Update, context: CallbackContext):
-    _list_previous_features(update, context)
+    _list_previous_features(context)
     return list_comics(update, context)
 
 
@@ -598,6 +585,7 @@ def find_comic_by_title(update: Update, context: CallbackContext):
         Route.COMICS,
         "title",
         CustomKeyboard.comics_menu,
+        Text.comics_menu,
         States.FIND_COMIC_BY_TITLE.value,
     )
 
@@ -610,6 +598,7 @@ def find_comic_by_title_beginning(update: Update, context: CallbackContext):
         Route.COMICS,
         "titleStartsWith",
         CustomKeyboard.comics_menu,
+        Text.comics_menu,
         States.FIND_COMIC_BY_TITLE_BEGINNING.value,
     )
 
@@ -617,12 +606,12 @@ def find_comic_by_title_beginning(update: Update, context: CallbackContext):
 def list_previous_comics_from_title_beginning(
     update: Update, context: CallbackContext
 ):
-    _list_previous_features(update, context)
+    _list_previous_features(context)
     return find_comic_by_title_beginning(update, context)
 
 
 def list_previous_comics_from_title(update: Update, context: CallbackContext):
-    _list_previous_features(update, context)
+    _list_previous_features(context)
     return find_comic_by_title(update, context)
 
 
@@ -633,7 +622,7 @@ def list_events(update: Update, context: CallbackContext):
 
 
 def list_previous_events(update: Update, context: CallbackContext):
-    _list_previous_features(update, context)
+    _list_previous_features(context)
     return list_events(update, context)
 
 
@@ -645,6 +634,7 @@ def find_event_by_name(update: Update, context: CallbackContext):
         Route.EVENTS,
         "name",
         CustomKeyboard.events_menu,
+        Text.comics_menu,
         States.FIND_EVENT_BY_NAME.value,
     )
 
@@ -657,6 +647,7 @@ def find_event_by_name_beginning(update: Update, context: CallbackContext):
         Route.EVENTS,
         "nameStartsWith",
         CustomKeyboard.events_menu,
+        Text.comics_menu,
         States.FIND_EVENT_BY_NAME_BEGINNING.value,
     )
 
@@ -664,12 +655,12 @@ def find_event_by_name_beginning(update: Update, context: CallbackContext):
 def list_previous_events_from_name_beginning(
     update: Update, context: CallbackContext
 ):
-    _list_previous_features(update, context)
+    _list_previous_features(context)
     return find_event_by_name_beginning(update, context)
 
 
 def list_previous_events_from_name(update: Update, context: CallbackContext):
-    _list_previous_features(update, context)
+    _list_previous_features(context)
     return find_event_by_name(update, context)
 
 
@@ -680,7 +671,7 @@ def list_series(update: Update, context: CallbackContext):
 
 
 def list_previous_series(update: Update, context: CallbackContext):
-    _list_previous_features(update, context)
+    _list_previous_features(context)
     return list_series(update, context)
 
 
@@ -692,6 +683,7 @@ def find_series_by_title(update: Update, context: CallbackContext):
         Route.SERIES,
         "title",
         CustomKeyboard.series_menu,
+        Text.series_menu,
         States.FIND_SERIES_BY_TITLE.value,
     )
 
@@ -704,6 +696,7 @@ def find_series_by_title_beginning(update: Update, context: CallbackContext):
         Route.SERIES,
         "titleStartsWith",
         CustomKeyboard.series_menu,
+        Text.series_menu,
         States.FIND_SERIES_BY_TITLE_BEGINNING.value,
     )
 
@@ -711,12 +704,12 @@ def find_series_by_title_beginning(update: Update, context: CallbackContext):
 def list_previous_series_from_title_beginning(
     update: Update, context: CallbackContext
 ):
-    _list_previous_features(update, context)
+    _list_previous_features(context)
     return find_series_by_title_beginning(update, context)
 
 
 def list_previous_series_from_title(update: Update, context: CallbackContext):
-    _list_previous_features(update, context)
+    _list_previous_features(context)
     return find_series_by_title_beginning(update, context)
 
 
