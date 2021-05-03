@@ -1,4 +1,6 @@
 import abc
+import sys
+import traceback
 
 from telegram import Update
 from telegram.ext import CallbackContext
@@ -47,6 +49,7 @@ class BaseHandler(abc.ABC):
         update.callback_query.edit_message_text(
             text=text, reply_markup=keyboard
         )
+        return text != Text.error
 
     @classmethod
     def _list_previous_features(cls, context: CallbackContext):
@@ -65,6 +68,7 @@ class BaseHandler(abc.ABC):
         menu_text,
         return_state,
     ):
+
         if not (value := context.chat_data.get(DATA)):
             context.chat_data[INPUT_FOR] = return_state
             return cls.ask_for_input(update, context)
@@ -72,15 +76,17 @@ class BaseHandler(abc.ABC):
         text, keyboard = cls._request_features(
             context, route, LIMIT, **{filter_key: value}
         )
+        if text != Text.error:
+            if not keyboard:
+                keyboard = menu_keyboard
 
-        if not keyboard:
-            keyboard = menu_keyboard
-
-            if DATA in context.chat_data:
-                del context.chat_data[DATA]
-            text = Text.not_found_by_name(value)
-            update.message.reply_text(text=text)
-            text = menu_text
+                if DATA in context.chat_data:
+                    del context.chat_data[DATA]
+                text = Text.not_found_by_name(value)
+                update.message.reply_text(text=text)
+                text = menu_text
+        else:
+            return_state = States.END.value
 
         if update.message:
             update.message.reply_text(text=text, reply_markup=keyboard)
@@ -97,27 +103,30 @@ class BaseHandler(abc.ABC):
 
         fetcher_ = context.bot_data[FETCHER]
         offset = context.chat_data.get(OFFSET, 0)
-        fetched_data = fetcher_.list_features(
-            route, limit=limit, offset=offset, **kwargs
-        )
+        try:
+            fetched_data = fetcher_.list_features(
+                route, limit=limit, offset=offset, **kwargs
+            )
+            has_more_pages = limit + offset < fetched_data.total
 
-        has_more_pages = limit + offset < fetched_data.total
+            features = fetched_data.features
+            context.chat_data[FEATURES] = features
 
-        features = fetched_data.features
-        context.chat_data[FEATURES] = features
-
-        sorted_features = sorted(
-            [
-                getattr(feature, "name", getattr(feature, "title", ""))
-                for feature in features
-            ]
-        )
-        keyboard = CustomKeyboard.keyboard_from_iterable(
-            sorted_features, bool(offset), has_more_pages
-        )
-        text = Text.from_container(sorted_features)
-        context.chat_data[OFFSET] = offset + min(limit, fetched_data.count)
-
+            sorted_features = sorted(
+                [
+                    getattr(feature, "name", getattr(feature, "title", ""))
+                    for feature in features
+                ]
+            )
+            keyboard = CustomKeyboard.keyboard_from_iterable(
+                sorted_features, bool(offset), has_more_pages
+            )
+            text = Text.from_container(sorted_features)
+            context.chat_data[OFFSET] = offset + min(limit, fetched_data.count)
+        except Exception:
+            traceback.print_exc(file=sys.stderr)
+            text = Text.error
+            keyboard = CustomKeyboard.main_menu
         return text, keyboard
 
     @classmethod
@@ -128,8 +137,7 @@ class BaseHandler(abc.ABC):
         )
 
     @staticmethod
-    def ask_for_input(update: Update, context: CallbackContext) -> str:
-        context.chat_data[DATA] = update.callback_query.data
+    def ask_for_input(update: Update, _: CallbackContext) -> str:
         update.callback_query.answer()
         update.callback_query.edit_message_text(text=Text.ask_for_input)
         return States.ASK_FOR_INPUT.value

@@ -1,6 +1,3 @@
-import custom_types as ct
-
-
 class Creator:
     def __init__(self, resource_uri, name, role):
         self.resource_uri = resource_uri
@@ -31,7 +28,7 @@ class Character:
         self.detail = detail["url"].split("?utm")[0] if detail else ""
         self.wiki = wiki["url"].split("?utm")[0] if wiki else ""
         self.comic = comic["url"].split("?utm")[0] if comic else ""
-        self.collections: ct.Collections = collections
+        self.collections = collections
 
         self._resource_uri = resource_uri
 

@@ -7,6 +7,7 @@ class _Text:
     stop = "Okay, bye."
     end = "See you around!"
     ask_for_input = "Okay, tell me."
+    error = "Sorry, I can't handle this now, try again later."
 
     @staticmethod
     def menu():

@@ -1,14 +1,10 @@
-from typing import List
-
-import custom_types as ct
-
 from entities import Creator, Character, Comic, Event, Series
 
 
 class ResponseJsonParser:
     @staticmethod
     def parse_list_characters(response_json):
-        data: ct.Data = response_json["data"]
+        data = response_json["data"]
         count = response_json["data"]["count"]
         total = response_json["data"]["total"]
         characters = list()
@@ -21,19 +17,17 @@ class ResponseJsonParser:
                 if (desc := result.get("description"))
                 else f"Sorry, I did not find description for {name} :("
             )
-            thumbnail: ct.Thumbnail = result.get(
-                "thumbnail", ct.Thumbnail(path="", extension="")
-            )
+            thumbnail = result.get("thumbnail", dict(path="", extension=""))
             resource_uri = result.get("resourceURI", "")
 
-            comics: List[ct.Comics] = result.get("comics", [])
-            events: List[ct.Event] = result.get("events", [])
-            stories: List[ct.Story] = result.get("stories", [])
-            series: List[ct.Series] = result.get("series", [])
+            comics = result.get("comics", [])
+            events = result.get("events", [])
+            stories = result.get("stories", [])
+            series = result.get("series", [])
 
-            detail = ct.UrlInfo(type="", url="")
-            wiki = ct.UrlInfo(type="", url="")
-            comic = ct.UrlInfo(type="", url="")
+            detail = dict(type_="", url="")
+            wiki = dict(type_="", url="")
+            comic = dict(type_="", url="")
             public_links = dict(detail=detail, wiki=wiki, comiclink=comic)
             for url_info in result.get("urls", []):
                 _type = url_info["type"]
@@ -45,7 +39,7 @@ class ResponseJsonParser:
                 else:
                     print(f"CHARACTERS: {_type} not in public_links")
 
-            collections = ct.Collections(
+            collections = dict(
                 comics=comics, events=events, stories=stories, series=series
             )
 
@@ -84,12 +78,10 @@ class ResponseJsonParser:
                     f"Sorry, I did not found description for {title} :("
                 )
             page_count = result["pageCount"]
-            thumbnail: ct.Thumbnail = result.get(
-                "thumbnail", ct.Thumbnail(path="", extension="")
-            )
+            thumbnail = result.get("thumbnail", dict(path="", extension=""))
             resource_uri = result.get("resourceURI", "")
 
-            detail = ct.UrlInfo(type="", url="")
+            detail = dict(type="", url="")
             public_links = dict(detail=detail)
             for url_info in result.get("urls", []):
                 _type = url_info["type"]
@@ -142,13 +134,11 @@ class ResponseJsonParser:
                 description = result.get("variantDescription", "")
             if not description:
                 description = f"Sorry, I did not found description for {name}"
-            thumbnail: ct.Thumbnail = result.get(
-                "thumbnail", ct.Thumbnail(path="", extension="")
-            )
+            thumbnail = result.get("thumbnail", dict(path="", extension=""))
             resource_uri = result.get("resourceURI", "")
 
-            detail = ct.UrlInfo(type="", url="")
-            wiki = ct.UrlInfo(type="", url="")
+            detail = dict(type="", url="")
+            wiki = dict(type="", url="")
             public_links = dict(detail=detail, wiki=wiki)
             for url_info in result.get("urls", []):
                 _type = url_info["type"]
@@ -197,12 +187,10 @@ class ResponseJsonParser:
                 if (desc := result.get("description"))
                 else f"Sorry, I did not find description for {title} :("
             )
-            thumbnail: ct.Thumbnail = result.get(
-                "thumbnail", ct.Thumbnail(path="", extension="")
-            )
+            thumbnail = result.get("thumbnail", dict(path="", extension=""))
             resource_uri = result.get("resourceURI", "")
 
-            detail = ct.UrlInfo(type="", url="")
+            detail = dict(type="", url="")
             public_links = dict(detail=detail)
             for url_info in result.get("urls", []):
                 _type = url_info["type"]

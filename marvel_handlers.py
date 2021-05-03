@@ -29,8 +29,8 @@ class CharactersHandler(BaseHandler):
 
     @classmethod
     def list_characters(cls, update: Update, context: CallbackContext):
-        cls._list_features(update, context, Route.CHARACTERS)
-        return States.LIST_CHARACTERS.value
+        ok = cls._list_features(update, context, Route.CHARACTERS)
+        return States.LIST_CHARACTERS.value if ok else States.END.value
 
     @classmethod
     def list_previous_characters(
@@ -98,8 +98,8 @@ class ComicsHandler(BaseHandler):
 
     @classmethod
     def list_comics(cls, update: Update, context: CallbackContext):
-        cls._list_features(update, context, Route.COMICS)
-        return States.LIST_COMICS.value
+        ok = cls._list_features(update, context, Route.COMICS)
+        return States.LIST_COMICS.value if ok else States.END.value
 
     @classmethod
     def list_previous_comics(cls, update: Update, context: CallbackContext):
@@ -165,8 +165,8 @@ class EventsHandler(BaseHandler):
 
     @classmethod
     def list_events(cls, update: Update, context: CallbackContext):
-        cls._list_features(update, context, Route.EVENTS)
-        return States.LIST_EVENTS.value
+        ok = cls._list_features(update, context, Route.EVENTS)
+        return States.LIST_EVENTS.value if ok else States.END.value
 
     @classmethod
     def list_previous_events(cls, update: Update, context: CallbackContext):
@@ -232,8 +232,8 @@ class SeriesHandler(BaseHandler):
 
     @classmethod
     def list_series(cls, update: Update, context: CallbackContext):
-        cls._list_features(update, context, Route.SERIES)
-        return States.LIST_SERIES.value
+        ok = cls._list_features(update, context, Route.SERIES)
+        return States.LIST_SERIES.value if ok else States.END.value
 
     @classmethod
     def list_previous_series(cls, update: Update, context: CallbackContext):

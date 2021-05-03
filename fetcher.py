@@ -5,8 +5,6 @@ from enum import IntEnum
 
 import requests
 
-import custom_types as ct
-
 from parser import ResponseJsonParser, Parsed
 
 
@@ -64,17 +62,17 @@ class Fetcher:
 
     def list_features(self, route, **kwargs):
         parser = self.LIST_PARSERS[route]
+
         response = self.make_request(route, **kwargs)
         if response.status_code == 200:
-            r_json: ct.ResponseJSON = response.json()
+            r_json = response.json()
             parsed = parser(r_json)
         else:
-            parsed = Parsed()
-            print(
+            raise Exception(
                 f"""
-    Response ended with status code {response.status_code},
-    response.text is {response.text}
-    """
+Response ended with status code {response.status_code},
+response.text is {response.text}
+"""
             )
         return parsed
 
