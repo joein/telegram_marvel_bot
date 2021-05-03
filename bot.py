@@ -42,14 +42,12 @@ def main(bot_token, fetcher_) -> None:
         entry_points=[CommandHandler("start", MiscHandler.start)],
         states={
             States.MENU.value: menu_handlers,
-            States.STOPPING.value: [
-                CommandHandler("start", MiscHandler.start)
-            ],
+            States.END.value: [CommandHandler("start", MiscHandler.start)]
         },
         fallbacks=[
             CommandHandler("stop", MiscHandler.stop),
             CallbackQueryHandler(
-                MiscHandler.end, pattern="^" + str(States.END.value) + "$"
+                MiscHandler.end, pattern=f"^{States.END.value}$"
             ),
         ],
     )

@@ -5,7 +5,6 @@ from telegram.ext import ConversationHandler
 
 class States(enum.Enum):
     MENU = "MENU"
-    STOPPING = "STOPPING"
     BACK = "BACK"
     NEXT_PAGE = "NEXT_PAGE"
     PREV_PAGE = "PREV_PAGE"

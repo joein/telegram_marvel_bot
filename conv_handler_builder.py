@@ -45,7 +45,6 @@ class ConversationHandlerBuilder:
             ],
             map_to_parent={
                 States.END.value: States.MENU.value,
-                States.STOPPING.value: States.END.value,
             },
         )
         return handler
