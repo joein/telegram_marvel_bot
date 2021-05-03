@@ -5,7 +5,7 @@ from enum import IntEnum
 
 import requests
 
-from parser import ResponseJsonParser, Parsed
+from parser import ResponseJsonParser
 
 
 class Route(IntEnum):
