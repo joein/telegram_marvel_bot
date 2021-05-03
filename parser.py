@@ -6,7 +6,6 @@ from entities import Creator, Character, Comic, Event, Series
 
 
 class ResponseJsonParser:
-
     @staticmethod
     def parse_list_characters(response_json):
         data: ct.Data = response_json["data"]
@@ -17,7 +16,11 @@ class ResponseJsonParser:
         for result in data["results"]:
             _id = result["id"]
             name = result["name"]
-            description = desc if (desc := result.get("description")) else f"Sorry, I did not find description for {name} :("
+            description = (
+                desc
+                if (desc := result.get("description"))
+                else f"Sorry, I did not find description for {name} :("
+            )
             thumbnail: ct.Thumbnail = result.get(
                 "thumbnail", ct.Thumbnail(path="", extension="")
             )
@@ -77,7 +80,9 @@ class ResponseJsonParser:
             if not description:
                 description = result.get("variantDescription", "")
             if not description:
-                description = f"Sorry, I did not found description for {title} :("
+                description = (
+                    f"Sorry, I did not found description for {title} :("
+                )
             page_count = result["pageCount"]
             thumbnail: ct.Thumbnail = result.get(
                 "thumbnail", ct.Thumbnail(path="", extension="")
@@ -187,7 +192,11 @@ class ResponseJsonParser:
         for result in data["results"]:
             _id = result["id"]
             title = result["title"]
-            description = desc if (desc := result.get("description")) else f"Sorry, I did not find description for {title} :("
+            description = (
+                desc
+                if (desc := result.get("description"))
+                else f"Sorry, I did not find description for {title} :("
+            )
             thumbnail: ct.Thumbnail = result.get(
                 "thumbnail", ct.Thumbnail(path="", extension="")
             )

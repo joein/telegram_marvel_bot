@@ -28,9 +28,9 @@ class Character:
         self.name = name
         self.description = description
         self.img_link = img_link
-        self.detail = detail['url'].split('?utm')[0] if detail else ''
-        self.wiki = wiki['url'].split('?utm')[0] if wiki else ''
-        self.comic = comic['url'].split('?utm')[0] if comic else ''
+        self.detail = detail["url"].split("?utm")[0] if detail else ""
+        self.wiki = wiki["url"].split("?utm")[0] if wiki else ""
+        self.comic = comic["url"].split("?utm")[0] if comic else ""
         self.collections: ct.Collections = collections
 
         self._resource_uri = resource_uri
@@ -56,7 +56,7 @@ class Comic:
         self.description = description
         self.img_link = img_link
         self.page_count = page_count
-        self.detail = detail['url'].split('?utm')[0] if detail else ''
+        self.detail = detail["url"].split("?utm")[0] if detail else ""
         self.resource_uri = resource_uri
         self.creators = creators
 
@@ -83,8 +83,8 @@ class Event:
         self.name = name
         self.description = description
         self.img_link = img_link
-        self.detail = detail['url'].split('?utm')[0] if detail else ''
-        self.wiki = wiki['url'].split('?utm')[0] if wiki else ''
+        self.detail = detail["url"].split("?utm")[0] if detail else ""
+        self.wiki = wiki["url"].split("?utm")[0] if wiki else ""
         self.resource_uri = resource_uri
         self.start = start
         self.end = end
@@ -114,7 +114,7 @@ class Series:
         self.title = title
         self.description = description
         self.img_link = img_link
-        self.detail = detail['url'].split('?utm')[0] if detail else ''
+        self.detail = detail["url"].split("?utm")[0] if detail else ""
         self.resource_uri = resource_uri
         self.start_year = start_year
         self.end_year = end_year

@@ -29,7 +29,7 @@ class Fetcher:
         Route.CHARACTERS: ResponseJsonParser.parse_list_characters,
         Route.COMICS: ResponseJsonParser.parse_list_comics,
         Route.EVENTS: ResponseJsonParser.parse_list_events,
-        Route.SERIES: ResponseJsonParser.parse_list_series
+        Route.SERIES: ResponseJsonParser.parse_list_series,
     }
 
     FILTERS_TEMPLATE = dict(
@@ -79,18 +79,13 @@ class Fetcher:
         return parsed
 
     def get_feature_by_name(self, route, name, limit=100, offset=0):
-        return self.list_features(
-            route, name=name, limit=limit, offset=offset
-        )
+        return self.list_features(route, name=name, limit=limit, offset=offset)
 
     def get_feature_by_name_starts_with(
         self, route, name_starts_with, limit=100, offset=0
     ):
         return self.list_features(
-            route,
-            nameStartsWith=name_starts_with,
-            limit=limit,
-            offset=offset,
+            route, nameStartsWith=name_starts_with, limit=limit, offset=offset,
         )
 
     def get_feature_by_title(self, route, title, limit=100, offset=0):
@@ -108,9 +103,7 @@ class Fetcher:
             offset=offset,
         )
 
-    def get_feature_from_year(
-        self, route, start_year, limit=100, offset=0
-    ):
+    def get_feature_from_year(self, route, start_year, limit=100, offset=0):
         return self.list_features(
             route, startYear=start_year, limit=limit, offset=offset,
         )
