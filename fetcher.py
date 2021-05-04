@@ -30,10 +30,6 @@ class Fetcher:
         Route.SERIES: ResponseJsonParser.parse_list_series,
     }
 
-    FILTERS_TEMPLATE = dict(
-        name="", nameStartsWith="", comics="", series="", events="", stories=""
-    )
-
     def __init__(self, config):
         self._config = config
 
@@ -75,33 +71,3 @@ response.text is {response.text}
 """
             )
         return parsed
-
-    def get_feature_by_name(self, route, name, limit=100, offset=0):
-        return self.list_features(route, name=name, limit=limit, offset=offset)
-
-    def get_feature_by_name_starts_with(
-        self, route, name_starts_with, limit=100, offset=0
-    ):
-        return self.list_features(
-            route, nameStartsWith=name_starts_with, limit=limit, offset=offset,
-        )
-
-    def get_feature_by_title(self, route, title, limit=100, offset=0):
-        return self.list_features(
-            route, title=title, limit=limit, offset=offset
-        )
-
-    def get_feature_by_title_starts_with(
-        self, route, title_starts_with, limit=100, offset=0
-    ):
-        return self.list_features(
-            route,
-            titleStartsWith=title_starts_with,
-            limit=limit,
-            offset=offset,
-        )
-
-    def get_feature_from_year(self, route, start_year, limit=100, offset=0):
-        return self.list_features(
-            route, startYear=start_year, limit=limit, offset=offset,
-        )
