@@ -10,31 +10,36 @@ from states import States
 from fetcher import Fetcher
 from constants import FETCHER
 from base_handlers import MiscHandler
-from conv_handler_builder import ConversationHandlerBuilder
+from conversation_handlers import (
+    CharactersConversationHandler,
+    ComicsConversationHandler,
+    EventsConversationHandler,
+    SeriesConversationHandler,
+)
 
 
-def main(bot_token, fetcher_) -> None:
+def main(bot_token, fetcher) -> None:
     updater = Updater(bot_token)
     dispatcher = updater.dispatcher
-    dispatcher.bot_data[FETCHER] = fetcher_
+    dispatcher.bot_data[FETCHER] = fetcher
 
-    characters_conv = ConversationHandlerBuilder.characters()
-    comics_conv = ConversationHandlerBuilder.comics()
-    events_conv = ConversationHandlerBuilder.events()
-    series_conv = ConversationHandlerBuilder.series()
+    characters_handler = CharactersConversationHandler.get()
+    comics_handler = ComicsConversationHandler.get()
+    events_handler = EventsConversationHandler.get()
+    series_handler = SeriesConversationHandler.get()
 
     menu_handlers = [
-        characters_conv,
-        comics_conv,
-        events_conv,
-        series_conv,
+        characters_handler,
+        comics_handler,
+        events_handler,
+        series_handler,
     ]
 
-    conv_handler = ConversationHandler(
+    conversation_handler = ConversationHandler(
         entry_points=[CommandHandler("start", MiscHandler.start)],
         states={
             States.MENU.value: menu_handlers,
-            States.END.value: [CommandHandler("start", MiscHandler.start)]
+            States.END.value: [CommandHandler("start", MiscHandler.start)],
         },
         fallbacks=[
             CommandHandler("stop", MiscHandler.stop),
@@ -43,12 +48,12 @@ def main(bot_token, fetcher_) -> None:
             ),
         ],
     )
-    dispatcher.add_handler(conv_handler)
+    dispatcher.add_handler(conversation_handler)
     updater.start_polling()
     updater.idle()
 
 
 if __name__ == "__main__":
     config = Config()
-    fetcher = Fetcher(config)
-    main(config.bot_token, fetcher)
+    fetcher_ = Fetcher(config)
+    main(config.bot_token, fetcher_)
