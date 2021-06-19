@@ -9,7 +9,7 @@ from telegram.ext import (
 )
 
 from states import States
-from handlers.base_handlers import MiscHandler
+from handlers.entity_handlers import MiscHandler
 
 
 class ConversationHandlerBuilder:

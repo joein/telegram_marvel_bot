@@ -1,16 +1,14 @@
-from .characters import CharactersConversationHandler, CharactersHandler
-from .comics import ComicsConversationHandler, ComicsHandler
-from .events import EventsConversationHandler, EventsHandler
-from .series import SeriesConversationHandler, SeriesHandler
+from .misc import MiscHandler
+from .comics import ComicsHandler
+from .events import EventsHandler
+from .series import SeriesHandler
+from .characters import CharactersHandler
 
 
 __all__ = [
-    "CharactersConversationHandler",
-    "CharactersHandler",
-    "ComicsConversationHandler",
+    "MiscHandler",
     "ComicsHandler",
-    "EventsConversationHandler",
     "EventsHandler",
-    "SeriesConversationHandler",
     "SeriesHandler",
+    "CharactersHandler",
 ]

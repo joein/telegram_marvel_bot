@@ -1,4 +1,4 @@
-from entities import Creator, Character, Comic, Event, Series
+from fetcher.entities import Creator, Character, Comic, Event, Series
 
 
 class ResponseJsonParser:
