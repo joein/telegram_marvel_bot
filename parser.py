@@ -36,8 +36,6 @@ class ResponseJsonParser:
                     public_link = public_links[_type]
                     public_link["type"] = _type
                     public_link["url"] = url
-                else:
-                    print(f"CHARACTERS: {_type} not in public_links")
 
             collections = dict(
                 comics=comics, events=events, stories=stories, series=series
@@ -90,8 +88,6 @@ class ResponseJsonParser:
                     public_link = public_links[_type]
                     public_link["type"] = _type
                     public_link["url"] = url
-                else:
-                    print(f"COMICS {_type} not in public_links")
             img_link = f"{thumbnail['path']}.{thumbnail['extension']}"
 
             creators = []
@@ -147,8 +143,6 @@ class ResponseJsonParser:
                     public_link = public_links[_type]
                     public_link["type"] = _type
                     public_link["url"] = url
-                else:
-                    print(f"EVENTS {_type} not in public_links")
             img_link = f"{thumbnail['path']}.{thumbnail['extension']}"
 
             start = result["start"]
@@ -199,8 +193,6 @@ class ResponseJsonParser:
                     public_link = public_links[_type]
                     public_link["type"] = _type
                     public_link["url"] = url
-                else:
-                    print(f"SERIES {_type} not in public_links")
             img_link = f"{thumbnail['path']}.{thumbnail['extension']}"
 
             creators = []
