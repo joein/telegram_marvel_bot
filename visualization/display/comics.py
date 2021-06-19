@@ -12,7 +12,7 @@ class ComicsDisplay(BaseDisplay):
         detail = f"detail link: {comic.detail}"
         caption = "\n\n".join(
             (
-                comic.title,
+                comic.name,
                 comic.description,
                 page_count,
                 detail,

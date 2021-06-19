@@ -2,7 +2,7 @@ class Comic:
     def __init__(
         self,
         _id,
-        title,
+        name,
         description,
         img_link,
         page_count,
@@ -11,7 +11,7 @@ class Comic:
         creators,
     ):
         self._id = _id
-        self.title = title
+        self.name = name
         self.description = description
         self.img_link = img_link
         self.page_count = page_count
@@ -20,5 +20,4 @@ class Comic:
         self.creators = creators
 
     def __repr__(self):
-        return f"Comic(_id: {self._id}, title: {self.title}, resource_uri: {self.resource_uri})"
-
+        return f"Comic(_id: {self._id}, title: {self.name}, resource_uri: {self.resource_uri})"

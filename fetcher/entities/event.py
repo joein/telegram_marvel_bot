@@ -27,4 +27,3 @@ class Event:
 
     def __repr__(self):
         return f"Event(_id: {self._id}, title: {self.name}, resource_uri: {self.resource_uri})"
-

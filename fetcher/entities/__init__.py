@@ -5,4 +5,4 @@ from .general import Creator
 from .character import Character
 
 
-__all__ = ['Creator', 'Character', 'Event', 'Comic', 'Series']
+__all__ = ["Creator", "Character", "Event", "Comic", "Series"]

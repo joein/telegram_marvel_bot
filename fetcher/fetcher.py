@@ -40,7 +40,7 @@ class Fetcher:
         digest = hashlib.md5(
             f"{ts}{private_key}{public_key}".encode("utf-8")
         ).hexdigest()
-        params = dict(ts=ts, apikey=public_key, hash=digest)
+        params = {"ts": ts, "apikey": public_key, "hash": digest}
 
         query = f"https://{address}/v1/public/{route}"
 

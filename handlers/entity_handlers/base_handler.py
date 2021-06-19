@@ -180,4 +180,3 @@ class BaseHandler(abc.ABC):
     @abc.abstractmethod
     def list_previous_from_name(cls, update: Update, context: CallbackContext):
         pass
-

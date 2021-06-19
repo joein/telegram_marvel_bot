@@ -14,7 +14,7 @@ class SeriesDisplay(BaseDisplay):
 
         caption = "\n\n".join(
             (
-                single_series.title,
+                single_series.name,
                 single_series.description,
                 detail,
                 f"Start in: {single_series.start_year}",

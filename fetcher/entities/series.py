@@ -2,7 +2,7 @@ class Series:
     def __init__(
         self,
         _id,
-        title,
+        name,
         description,
         img_link,
         detail,
@@ -14,7 +14,7 @@ class Series:
         creators,
     ):
         self._id = _id
-        self.title = title
+        self.name = name
         self.description = description
         self.img_link = img_link
         self.detail = detail["url"].split("?utm")[0] if detail else ""
@@ -26,4 +26,4 @@ class Series:
         self.creators = creators
 
     def __repr__(self):
-        return f"Series(_id: {self._id}, title: {self.title}, resource_uri: {self.resource_uri})"
+        return f"Series(_id: {self._id}, title: {self.name}, resource_uri: {self.resource_uri})"
