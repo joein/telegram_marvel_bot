@@ -1,6 +1,6 @@
 from states import States
-from display import Display
 from handlers.entity_handlers import CharactersHandler
+from visualization.display import CharactersDisplay as Display
 from handlers.conversation_handlers.conversation_handler_builder import (
     ConversationHandlerBuilder,
     ConversationHandlerInterface,
@@ -17,7 +17,7 @@ class CharactersConversationHandler(ConversationHandlerInterface):
         }
         back = {f"^{States.BACK.value}$": CharactersHandler.menu}
         send = {
-            f"^(?!{States.END.value}).+$": Display.send_character,
+            f"^(?!{States.END.value}).+$": Display.send,
         }
         list_ = {
             **back,

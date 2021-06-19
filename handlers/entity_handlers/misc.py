@@ -3,8 +3,8 @@ from telegram.ext import CallbackContext
 
 from text import Text
 from states import States
-from custom_keyboard import CustomKeyboard
 from constants import OFFSET, START_OVER
+from visualization.custom_keyboard import CustomKeyboard
 
 
 class MiscHandler:

@@ -7,7 +7,7 @@ from telegram.ext import CallbackContext
 
 from text import Text
 from states import States
-from custom_keyboard import CustomKeyboard
+from visualization.custom_keyboard import CustomKeyboard
 from constants import (
     DATA,
     INPUT_FOR,

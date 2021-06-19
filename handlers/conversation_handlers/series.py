@@ -1,6 +1,6 @@
 from states import States
-from display import Display
 from handlers.entity_handlers import SeriesHandler
+from visualization.display import SeriesDisplay as Display
 from handlers.conversation_handlers.conversation_handler_builder import (
     ConversationHandlerBuilder,
     ConversationHandlerInterface,
@@ -19,7 +19,7 @@ class SeriesConversationHandler(ConversationHandlerInterface):
             f"^{States.BACK.value}$": SeriesHandler.menu,
         }
         send = {
-            f"^(?!{States.END.value}).+$": Display.send_series,
+            f"^(?!{States.END.value}).+$": Display.send,
         }
         list_ = {
             **back,

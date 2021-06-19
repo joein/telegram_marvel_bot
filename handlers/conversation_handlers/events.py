@@ -1,6 +1,6 @@
 from states import States
-from display import Display
 from handlers.entity_handlers import EventsHandler
+from visualization.display import EventsDisplay as Display
 from handlers.conversation_handlers.conversation_handler_builder import (
     ConversationHandlerBuilder,
     ConversationHandlerInterface,
@@ -19,7 +19,7 @@ class EventsConversationHandler(ConversationHandlerInterface):
             f"^{States.BACK.value}$": EventsHandler.menu,
         }
         send = {
-            f"^(?!{States.END.value}).+$": Display.send_event,
+            f"^(?!{States.END.value}).+$": Display.send,
         }
         list_ = {
             **back,

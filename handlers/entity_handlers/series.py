@@ -4,7 +4,7 @@ from telegram.ext import CallbackContext
 from text import Text
 from states import States
 from fetcher.fetcher import Route
-from custom_keyboard import CustomKeyboard
+from visualization.custom_keyboard import CustomKeyboard
 from handlers.entity_handlers.base_handler import BaseHandler
 
 

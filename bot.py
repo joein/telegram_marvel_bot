@@ -7,7 +7,7 @@ from telegram.ext import (
 
 from config import Config
 from states import States
-from fetcher.fetcher import Fetcher
+from fetcher import Fetcher
 from constants import FETCHER
 from handlers.entity_handlers import MiscHandler
 from handlers.conversation_handlers import (

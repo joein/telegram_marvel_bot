@@ -2,9 +2,9 @@ from telegram import Update
 from telegram.ext import CallbackContext
 
 from text import Text
-from fetcher.fetcher import Route
+from fetcher import Route
 from states import States
-from custom_keyboard import CustomKeyboard
+from visualization.custom_keyboard import CustomKeyboard
 from handlers.entity_handlers.base_handler import BaseHandler
 
 

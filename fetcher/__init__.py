@@ -1,4 +1,4 @@
-from .fetcher import Fetcher
+from .fetcher import Fetcher, Route
 
 
-__all__ = ['Fetcher']
+__all__ = ["Fetcher", "Route"]
