@@ -20,42 +20,38 @@ class CharactersHandler(BaseHandler):
         return States.CHARACTERS.value
 
     @classmethod
-    def select_feature(cls, state, update: Update, context: CallbackContext):
+    def select(cls, state, update: Update, context: CallbackContext):
         features_map = {
-            States.FIND_CHARACTER_BY_NAME.value: cls.find_character_by_name,
-            States.FIND_CHARACTER_BY_NAME_BEGINNING.value: cls.find_character_by_name_beginning,
+            States.FIND_CHARACTER_BY_NAME.value: cls.find_by_name,
+            States.FIND_CHARACTER_BY_NAME_BEGINNING.value: cls.find_by_name_beginning,
         }
         return features_map[state](update, context)
 
     @classmethod
-    def list_characters(cls, update: Update, context: CallbackContext):
-        ok = cls._list_features(update, context, Route.CHARACTERS)
+    def list_(cls, update: Update, context: CallbackContext):
+        ok = cls._list_(update, context, Route.CHARACTERS)
         return States.LIST_CHARACTERS.value if ok else States.END.value
 
     @classmethod
-    def list_previous_characters(
-        cls, update: Update, context: CallbackContext
-    ):
-        cls._list_previous_features(context)
-        return cls.list_characters(update, context)
+    def list_previous(cls, update: Update, context: CallbackContext):
+        cls._list_previous(context)
+        return cls.list_(update, context)
 
     @classmethod
-    def list_previous_characters_from_name(
-        cls, update: Update, context: CallbackContext
-    ):
-        cls._list_previous_features(context)
-        return cls.find_character_by_name(update, context)
+    def list_previous_from_name(cls, update: Update, context: CallbackContext):
+        cls._list_previous(context)
+        return cls.find_by_name(update, context)
 
     @classmethod
-    def list_previous_characters_from_name_beginning(
+    def list_previous_from_name_beginning(
         cls, update: Update, context: CallbackContext
     ):
-        cls._list_previous_features(context)
-        return cls.find_character_by_name_beginning(update, context)
+        cls._list_previous(context)
+        return cls.find_by_name_beginning(update, context)
 
     @classmethod
-    def find_character_by_name(cls, update: Update, context: CallbackContext):
-        return cls._find_feature_by_name(
+    def find_by_name(cls, update: Update, context: CallbackContext):
+        return cls._find_by_name(
             update,
             context,
             Route.CHARACTERS,
@@ -66,10 +62,8 @@ class CharactersHandler(BaseHandler):
         )
 
     @classmethod
-    def find_character_by_name_beginning(
-        cls, update: Update, context: CallbackContext
-    ):
-        return cls._find_feature_by_name(
+    def find_by_name_beginning(cls, update: Update, context: CallbackContext):
+        return cls._find_by_name(
             update,
             context,
             Route.CHARACTERS,
@@ -89,26 +83,26 @@ class ComicsHandler(BaseHandler):
         return States.COMICS.value
 
     @classmethod
-    def select_feature(cls, state, update: Update, context: CallbackContext):
+    def select(cls, state, update: Update, context: CallbackContext):
         features_map = {
-            States.FIND_COMIC_BY_TITLE.value: cls.find_comic_by_title,
-            States.FIND_COMIC_BY_TITLE_BEGINNING.value: cls.find_comic_by_title_beginning,
+            States.FIND_COMIC_BY_TITLE.value: cls.find_by_name,
+            States.FIND_COMIC_BY_TITLE_BEGINNING.value: cls.find_by_name_beginning,
         }
         return features_map[state](update, context)
 
     @classmethod
-    def list_comics(cls, update: Update, context: CallbackContext):
-        ok = cls._list_features(update, context, Route.COMICS)
+    def list_(cls, update: Update, context: CallbackContext):
+        ok = cls._list_(update, context, Route.COMICS)
         return States.LIST_COMICS.value if ok else States.END.value
 
     @classmethod
-    def list_previous_comics(cls, update: Update, context: CallbackContext):
-        cls._list_previous_features(context)
-        return cls.list_comics(update, context)
+    def list_previous(cls, update: Update, context: CallbackContext):
+        cls._list_previous(context)
+        return cls.list_(update, context)
 
     @classmethod
-    def find_comic_by_title(cls, update: Update, context: CallbackContext):
-        return cls._find_feature_by_name(
+    def find_by_name(cls, update: Update, context: CallbackContext):
+        return cls._find_by_name(
             update,
             context,
             Route.COMICS,
@@ -119,10 +113,8 @@ class ComicsHandler(BaseHandler):
         )
 
     @classmethod
-    def find_comic_by_title_beginning(
-        cls, update: Update, context: CallbackContext
-    ):
-        return cls._find_feature_by_name(
+    def find_by_name_beginning(cls, update: Update, context: CallbackContext):
+        return cls._find_by_name(
             update,
             context,
             Route.COMICS,
@@ -133,18 +125,16 @@ class ComicsHandler(BaseHandler):
         )
 
     @classmethod
-    def list_previous_comics_from_title_beginning(
+    def list_previous_from_name_beginning(
         cls, update: Update, context: CallbackContext
     ):
-        cls._list_previous_features(context)
-        return cls.find_comic_by_title_beginning(update, context)
+        cls._list_previous(context)
+        return cls.find_by_name_beginning(update, context)
 
     @classmethod
-    def list_previous_comics_from_title(
-        cls, update: Update, context: CallbackContext
-    ):
-        cls._list_previous_features(context)
-        return cls.find_comic_by_title(update, context)
+    def list_previous_from_name(cls, update: Update, context: CallbackContext):
+        cls._list_previous(context)
+        return cls.find_by_name(update, context)
 
 
 class EventsHandler(BaseHandler):
@@ -156,26 +146,26 @@ class EventsHandler(BaseHandler):
         return States.EVENTS.value
 
     @classmethod
-    def select_feature(cls, state, update: Update, context: CallbackContext):
+    def select(cls, state, update: Update, context: CallbackContext):
         features_map = {
-            States.FIND_EVENT_BY_NAME.value: cls.find_event_by_name,
-            States.FIND_EVENT_BY_NAME_BEGINNING.value: cls.find_event_by_name_beginning,
+            States.FIND_EVENT_BY_NAME.value: cls.find_by_name,
+            States.FIND_EVENT_BY_NAME_BEGINNING.value: cls.find_by_name_beginning,
         }
         return features_map[state](update, context)
 
     @classmethod
-    def list_events(cls, update: Update, context: CallbackContext):
-        ok = cls._list_features(update, context, Route.EVENTS)
+    def list_(cls, update: Update, context: CallbackContext):
+        ok = cls._list_(update, context, Route.EVENTS)
         return States.LIST_EVENTS.value if ok else States.END.value
 
     @classmethod
-    def list_previous_events(cls, update: Update, context: CallbackContext):
-        cls._list_previous_features(context)
-        return cls.list_events(update, context)
+    def list_previous(cls, update: Update, context: CallbackContext):
+        cls._list_previous(context)
+        return cls.list_(update, context)
 
     @classmethod
-    def find_event_by_name(cls, update: Update, context: CallbackContext):
-        return cls._find_feature_by_name(
+    def find_by_name(cls, update: Update, context: CallbackContext):
+        return cls._find_by_name(
             update,
             context,
             Route.EVENTS,
@@ -186,10 +176,8 @@ class EventsHandler(BaseHandler):
         )
 
     @classmethod
-    def find_event_by_name_beginning(
-        cls, update: Update, context: CallbackContext
-    ):
-        return cls._find_feature_by_name(
+    def find_by_name_beginning(cls, update: Update, context: CallbackContext):
+        return cls._find_by_name(
             update,
             context,
             Route.EVENTS,
@@ -200,18 +188,16 @@ class EventsHandler(BaseHandler):
         )
 
     @classmethod
-    def list_previous_events_from_name_beginning(
+    def list_previous_from_name_beginning(
         cls, update: Update, context: CallbackContext
     ):
-        cls._list_previous_features(context)
-        return cls.find_event_by_name_beginning(update, context)
+        cls._list_previous(context)
+        return cls.find_by_name_beginning(update, context)
 
     @classmethod
-    def list_previous_events_from_name(
-        cls, update: Update, context: CallbackContext
-    ):
-        cls._list_previous_features(context)
-        return cls.find_event_by_name(update, context)
+    def list_previous_from_name(cls, update: Update, context: CallbackContext):
+        cls._list_previous(context)
+        return cls.find_by_name(update, context)
 
 
 class SeriesHandler(BaseHandler):
@@ -223,27 +209,27 @@ class SeriesHandler(BaseHandler):
         return States.SERIES.value
 
     @classmethod
-    def select_feature(cls, state, update: Update, context: CallbackContext):
+    def select(cls, state, update: Update, context: CallbackContext):
         features_map = {
-            States.FIND_SERIES_BY_TITLE.value: cls.find_series_by_title,
-            States.FIND_SERIES_BY_TITLE_BEGINNING.value: cls.find_series_by_title_beginning,
+            States.FIND_SERIES_BY_TITLE.value: cls.find_by_name,
+            States.FIND_SERIES_BY_TITLE_BEGINNING.value: cls.find_by_name_beginning,
         }
         return features_map[state](update, context)
 
     @classmethod
-    def list_series(cls, update: Update, context: CallbackContext):
-        ok = cls._list_features(update, context, Route.SERIES)
+    def list_(cls, update: Update, context: CallbackContext):
+        ok = cls._list_(update, context, Route.SERIES)
         return States.LIST_SERIES.value if ok else States.END.value
 
     @classmethod
-    def list_previous_series(cls, update: Update, context: CallbackContext):
-        cls._list_previous_features(context)
-        return cls.list_series(update, context)
+    def list_previous(cls, update: Update, context: CallbackContext):
+        cls._list_previous(context)
+        return cls.list_(update, context)
 
     @classmethod
-    def find_series_by_title(cls, update: Update, context: CallbackContext):
+    def find_by_name(cls, update: Update, context: CallbackContext):
 
-        return cls._find_feature_by_name(
+        return cls._find_by_name(
             update,
             context,
             Route.SERIES,
@@ -254,10 +240,8 @@ class SeriesHandler(BaseHandler):
         )
 
     @classmethod
-    def find_series_by_title_beginning(
-        cls, update: Update, context: CallbackContext
-    ):
-        return cls._find_feature_by_name(
+    def find_by_name_beginning(cls, update: Update, context: CallbackContext):
+        return cls._find_by_name(
             update,
             context,
             Route.SERIES,
@@ -268,15 +252,15 @@ class SeriesHandler(BaseHandler):
         )
 
     @classmethod
-    def list_previous_series_from_title_beginning(
+    def list_previous_from_name_beginning(
         cls, update: Update, context: CallbackContext
     ):
-        cls._list_previous_features(context)
-        return cls.find_series_by_title_beginning(update, context)
+        cls._list_previous(context)
+        return cls.find_by_name_beginning(update, context)
 
     @classmethod
-    def list_previous_series_from_title(
+    def list_previous_from_title(
         cls, update: Update, context: CallbackContext
     ):
-        cls._list_previous_features(context)
-        return cls.find_series_by_title_beginning(update, context)
+        cls._list_previous(context)
+        return cls.find_by_name_beginning(update, context)
