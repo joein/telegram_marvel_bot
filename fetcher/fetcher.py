@@ -6,6 +6,7 @@ from enum import IntEnum
 import requests
 
 from fetcher.parser import ResponseJsonParser
+from fetcher.exceptions import FetcherException
 
 
 class Route(IntEnum):
@@ -64,10 +65,6 @@ class Fetcher:
             r_json = response.json()
             parsed = parser(r_json)
         else:
-            raise Exception(
-                f"""
-Response ended with status code {response.status_code},
-response.text is {response.text}
-"""
-            )
+            raise FetcherException(response.status_code, response.text)
+
         return parsed
