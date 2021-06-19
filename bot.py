@@ -9,8 +9,8 @@ from config import Config
 from states import States
 from fetcher import Fetcher
 from constants import FETCHER
-from base_handlers import MiscHandler
-from conversation_handlers import (
+from handlers.base_handlers import MiscHandler
+from handlers.entity_handlers import (
     CharactersConversationHandler,
     ComicsConversationHandler,
     EventsConversationHandler,

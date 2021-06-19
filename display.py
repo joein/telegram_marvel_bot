@@ -2,7 +2,7 @@ from telegram import Update
 from telegram.ext import CallbackContext
 
 from constants import FEATURES, OFFSET, MSG_DELETED
-from marvel_handlers import (
+from handlers.entity_handlers import (
     CharactersHandler,
     ComicsHandler,
     EventsHandler,

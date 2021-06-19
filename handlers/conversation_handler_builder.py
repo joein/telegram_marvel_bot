@@ -1,3 +1,5 @@
+import abc
+
 from telegram.ext import (
     MessageHandler,
     ConversationHandler,
@@ -7,7 +9,7 @@ from telegram.ext import (
 )
 
 from states import States
-from base_handlers import MiscHandler
+from handlers.base_handlers import MiscHandler
 
 
 class ConversationHandlerBuilder:
@@ -46,3 +48,18 @@ class ConversationHandlerBuilder:
             CallbackQueryHandler(handler, pattern=pattern)
             for pattern, handler in pattern_handler_map.items()
         ]
+
+
+class ConversationHandlerInterface(abc.ABC):
+    HANDLER = None
+
+    @classmethod
+    def get(cls):
+        if not cls.HANDLER:
+            cls.HANDLER = cls._build()
+        return cls.HANDLER
+
+    @classmethod
+    @abc.abstractmethod
+    def _build(cls):
+        pass
