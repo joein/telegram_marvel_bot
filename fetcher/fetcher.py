@@ -5,8 +5,13 @@ from enum import IntEnum
 
 import requests
 
-from fetcher.parser import ResponseJsonParser
 from fetcher.exceptions import FetcherException
+from fetcher.parser import (
+    ComicParser,
+    EventParser,
+    SeriesParser,
+    CharacterParser,
+)
 
 
 class Route(IntEnum):
@@ -25,10 +30,10 @@ class Fetcher:
         Route.SERIES: "series",
     }
     LIST_PARSERS = {
-        Route.CHARACTERS: ResponseJsonParser.parse_list_characters,
-        Route.COMICS: ResponseJsonParser.parse_list_comics,
-        Route.EVENTS: ResponseJsonParser.parse_list_events,
-        Route.SERIES: ResponseJsonParser.parse_list_series,
+        Route.CHARACTERS: CharacterParser,
+        Route.COMICS: ComicParser,
+        Route.EVENTS: EventParser,
+        Route.SERIES: SeriesParser,
     }
 
     def __init__(self, config):
@@ -63,7 +68,7 @@ class Fetcher:
         response = self.make_request(route, **kwargs)
         if response.status_code == 200:
             r_json = response.json()
-            parsed = parser(r_json)
+            parsed = parser.parse(r_json)
         else:
             raise FetcherException(response.status_code, response.text)
 

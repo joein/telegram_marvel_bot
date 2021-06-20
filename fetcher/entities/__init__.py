@@ -1,8 +1,5 @@
-from .comic import Comic
-from .event import Event
-from .series import Series
 from .general import Creator
-from .character import Character
+from .entity import EntityBuilder
 
 
-__all__ = ["Creator", "Character", "Event", "Comic", "Series"]
+__all__ = ["Creator", "EntityBuilder"]

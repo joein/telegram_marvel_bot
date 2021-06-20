@@ -14,10 +14,10 @@ class BaseDisplay(abc.ABC):
     def extract_feature(cls, update, context):
         feature = None
         for feature_ in context.chat_data[FEATURES]:
-            field_name = "name" if hasattr(feature_, "name") else "title"
-            value = getattr(feature_, field_name)
-            length_limited_value = value[: cls.CALLBACK_DATA_MAX_LENGTH]
-            if length_limited_value == update.callback_query.data:
+            length_limited_name = feature_.name[
+                : cls.CALLBACK_DATA_MAX_LENGTH
+            ]
+            if length_limited_name == update.callback_query.data:
                 feature = feature_
                 break
         return feature

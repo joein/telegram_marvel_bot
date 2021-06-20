@@ -9,16 +9,16 @@ class SeriesDisplay(BaseDisplay):
     @classmethod
     def content(cls, single_series):
         detail = f"detail link: {single_series.detail}"
-        next_series = f"Next series are: {single_series.next_series['name'] if single_series.next_series else ''}"
-        previous_series = f"Previous series are: {single_series.previous_series['name'] if single_series.previous_series else ''}"
+        next_series = f"Next series are: {single_series.next_['name'] if single_series.next_ else ''}"
+        previous_series = f"Previous series are: {single_series.previous['name'] if single_series.previous else ''}"
 
         caption = "\n\n".join(
             (
                 single_series.name,
                 single_series.description,
                 detail,
-                f"Start in: {single_series.start_year}",
-                f"Ends in: {single_series.end_year}",
+                f"Start in: {single_series.start}",
+                f"Ends in: {single_series.end}",
                 next_series,
                 previous_series,
             )
