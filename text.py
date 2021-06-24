@@ -18,7 +18,11 @@ class _Text:
 
     @staticmethod
     def _inner_menu(features, criterion):
-        text = f"You may request list of {features} (in alphabetical order), try to find {features} by exact {criterion} or by its beginning"
+        text = (
+            f"You may request list of {features} (in alphabetical order),"
+            f" try to find {features} by exact {criterion}"
+            f" or by its beginning"
+        )
         return text
 
     @classmethod

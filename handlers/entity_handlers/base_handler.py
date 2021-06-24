@@ -7,7 +7,7 @@ from telegram.ext import CallbackContext
 
 from text import Text
 from states import States
-from custom_keyboard import CustomKeyboard
+from visualization.custom_keyboard import CustomKeyboard
 from constants import (
     DATA,
     INPUT_FOR,
@@ -15,7 +15,6 @@ from constants import (
     OFFSET,
     FEATURES,
     LIMIT,
-    START_OVER,
     MSG_DELETED,
 )
 
@@ -43,7 +42,7 @@ class BaseHandler(abc.ABC):
             )
 
     @classmethod
-    def _list_features(cls, update: Update, context: CallbackContext, route):
+    def _list_(cls, update: Update, context: CallbackContext, route):
         text, keyboard = cls._request_features(context, route, LIMIT)
         update.callback_query.answer()
         update.callback_query.edit_message_text(
@@ -52,13 +51,13 @@ class BaseHandler(abc.ABC):
         return text != Text.error
 
     @classmethod
-    def _list_previous_features(cls, context: CallbackContext):
+    def _list_previous(cls, context: CallbackContext):
         current_offset = context.chat_data[OFFSET]
         subtract_value = LIMIT + (current_offset % 10 or LIMIT)
         context.chat_data[OFFSET] -= subtract_value
 
     @classmethod
-    def _find_feature_by_name(
+    def _find_by_name(
         cls,
         update: Update,
         context: CallbackContext,
@@ -101,10 +100,10 @@ class BaseHandler(abc.ABC):
     @classmethod
     def _request_features(cls, context, route, limit, **kwargs):
 
-        fetcher_ = context.bot_data[FETCHER]
+        fetcher = context.bot_data[FETCHER]
         offset = context.chat_data.get(OFFSET, 0)
         try:
-            fetched_data = fetcher_.list_features(
+            fetched_data = fetcher.list_features(
                 route, limit=limit, offset=offset, **kwargs
             )
             has_more_pages = limit + offset < fetched_data.total
@@ -132,9 +131,7 @@ class BaseHandler(abc.ABC):
     @classmethod
     def save_input(cls, update: Update, context: CallbackContext) -> str:
         context.chat_data[DATA] = update.message.text
-        return cls.select_feature(
-            context.chat_data[INPUT_FOR], update, context
-        )
+        return cls.select(context.chat_data[INPUT_FOR], update, context)
 
     @staticmethod
     def ask_for_input(update: Update, _: CallbackContext) -> str:
@@ -144,42 +141,42 @@ class BaseHandler(abc.ABC):
 
     @classmethod
     @abc.abstractmethod
-    def select_feature(cls, state, update: Update, context: CallbackContext):
+    def select(cls, state, update: Update, context: CallbackContext):
         pass
 
-
-class MiscHandler:
     @classmethod
-    def start(cls, update: Update, context: CallbackContext):
-        text = Text.menu
-
-        if context.chat_data.get(START_OVER):
-            update.callback_query.answer()
-            update.callback_query.edit_message_text(
-                text=text, reply_markup=CustomKeyboard.main_menu
-            )
-        else:
-            update.message.reply_text(Text.greetings)
-            update.message.reply_text(
-                text=text, reply_markup=CustomKeyboard.main_menu
-            )
-        context.chat_data[START_OVER] = False
-        return States.MENU.value
+    @abc.abstractmethod
+    def menu(cls, update: Update, context: CallbackContext) -> str:
+        pass
 
     @classmethod
-    def end_second_level(cls, update: Update, context: CallbackContext):
-        context.chat_data[OFFSET] = 0
-        context.chat_data[START_OVER] = True
-        cls.start(update, context)
-        return States.END.value
+    @abc.abstractmethod
+    def list_(cls, update: Update, context: CallbackContext):
+        pass
 
     @classmethod
-    def stop(cls, update: Update, _: CallbackContext):
-        update.message.reply_text(Text.stop)
-        return States.END.value
+    @abc.abstractmethod
+    def list_previous(cls, update: Update, context: CallbackContext):
+        pass
 
     @classmethod
-    def end(cls, update: Update, _: CallbackContext):
-        update.callback_query.answer()
-        update.callback_query.edit_message_text(text=Text.end)
-        return States.END.value
+    @abc.abstractmethod
+    def find_by_name(cls, update: Update, context: CallbackContext):
+        pass
+
+    @classmethod
+    @abc.abstractmethod
+    def find_by_name_beginning(cls, update: Update, context: CallbackContext):
+        pass
+
+    @classmethod
+    @abc.abstractmethod
+    def list_previous_from_name_beginning(
+        cls, update: Update, context: CallbackContext
+    ):
+        pass
+
+    @classmethod
+    @abc.abstractmethod
+    def list_previous_from_name(cls, update: Update, context: CallbackContext):
+        pass

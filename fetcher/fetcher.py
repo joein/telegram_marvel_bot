@@ -5,7 +5,13 @@ from enum import IntEnum
 
 import requests
 
-from parser import ResponseJsonParser
+from fetcher.exceptions import FetcherException
+from fetcher.parser import (
+    ComicParser,
+    EventParser,
+    SeriesParser,
+    CharacterParser,
+)
 
 
 class Route(IntEnum):
@@ -24,10 +30,10 @@ class Fetcher:
         Route.SERIES: "series",
     }
     LIST_PARSERS = {
-        Route.CHARACTERS: ResponseJsonParser.parse_list_characters,
-        Route.COMICS: ResponseJsonParser.parse_list_comics,
-        Route.EVENTS: ResponseJsonParser.parse_list_events,
-        Route.SERIES: ResponseJsonParser.parse_list_series,
+        Route.CHARACTERS: CharacterParser,
+        Route.COMICS: ComicParser,
+        Route.EVENTS: EventParser,
+        Route.SERIES: SeriesParser,
     }
 
     def __init__(self, config):
@@ -39,7 +45,7 @@ class Fetcher:
         digest = hashlib.md5(
             f"{ts}{private_key}{public_key}".encode("utf-8")
         ).hexdigest()
-        params = dict(ts=ts, apikey=public_key, hash=digest)
+        params = {"ts": ts, "apikey": public_key, "hash": digest}
 
         query = f"https://{address}/v1/public/{route}"
 
@@ -62,12 +68,8 @@ class Fetcher:
         response = self.make_request(route, **kwargs)
         if response.status_code == 200:
             r_json = response.json()
-            parsed = parser(r_json)
+            parsed = parser.parse(r_json)
         else:
-            raise Exception(
-                f"""
-Response ended with status code {response.status_code},
-response.text is {response.text}
-"""
-            )
+            raise FetcherException(response.status_code, response.text)
+
         return parsed
