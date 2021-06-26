@@ -7,7 +7,7 @@ from visualization.display.base_display import BaseDisplay
 
 class ComicsDisplay(BaseDisplay):
     @classmethod
-    def content(cls, comic):
+    def extract_content(cls, comic):
         page_count = f"Page count: {comic.page_count if comic.page_count else 'Unknown'}"
         detail = f"detail link: {comic.detail}"
         caption = "\n\n".join(
@@ -24,5 +24,5 @@ class ComicsDisplay(BaseDisplay):
 
     @classmethod
     def send(cls, update: Update, context: CallbackContext):
-        cls.send_feature(update, context, cls.content)
+        cls.send_entity(update, context)
         return ComicsHandler.menu(update, context)

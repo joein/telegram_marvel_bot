@@ -43,7 +43,7 @@ class BaseHandler(abc.ABC):
 
     @classmethod
     def _list_(cls, update: Update, context: CallbackContext, route):
-        text, keyboard = cls._request_features(context, route, LIMIT)
+        text, keyboard = cls._request_entities(context, route, LIMIT)
         update.callback_query.answer()
         update.callback_query.edit_message_text(
             text=text, reply_markup=keyboard
@@ -72,7 +72,7 @@ class BaseHandler(abc.ABC):
             context.chat_data[INPUT_FOR] = return_state
             return cls.ask_for_input(update, context)
 
-        text, keyboard = cls._request_features(
+        text, keyboard = cls._request_entities(
             context, route, LIMIT, **{filter_key: value}
         )
         if text != Text.error:
@@ -98,29 +98,29 @@ class BaseHandler(abc.ABC):
         return return_state
 
     @classmethod
-    def _request_features(cls, context, route, limit, **kwargs):
+    def _request_entities(cls, context, route, limit, **kwargs):
 
         fetcher = context.bot_data[FETCHER]
         offset = context.chat_data.get(OFFSET, 0)
         try:
-            fetched_data = fetcher.list_features(
+            fetched_data = fetcher.list_entities(
                 route, limit=limit, offset=offset, **kwargs
             )
             has_more_pages = limit + offset < fetched_data.total
 
-            features = fetched_data.features
-            context.chat_data[FEATURES] = features
+            entities = fetched_data.entities
+            context.chat_data[FEATURES] = entities
 
-            sorted_features = sorted(
+            sorted_entities = sorted(
                 [
-                    getattr(feature, "name", getattr(feature, "title", ""))
-                    for feature in features
+                    getattr(entity, "name", getattr(entity, "title", ""))
+                    for entity in entities
                 ]
             )
             keyboard = CustomKeyboard.keyboard_from_iterable(
-                sorted_features, bool(offset), has_more_pages
+                sorted_entities, bool(offset), has_more_pages
             )
-            text = Text.from_container(sorted_features)
+            text = Text.from_container(sorted_entities)
             context.chat_data[OFFSET] = offset + min(limit, fetched_data.count)
         except Exception:
             traceback.print_exc(file=sys.stderr)

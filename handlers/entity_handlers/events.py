@@ -18,11 +18,11 @@ class EventsHandler(BaseHandler):
 
     @classmethod
     def select(cls, state, update: Update, context: CallbackContext):
-        features_map = {
+        callbacks = {
             States.FIND_EVENT_BY_NAME.value: cls.find_by_name,
             States.FIND_EVENT_BY_NAME_BEGINNING.value: cls.find_by_name_beginning,
         }
-        return features_map[state](update, context)
+        return callbacks[state](update, context)
 
     @classmethod
     def list_(cls, update: Update, context: CallbackContext):
