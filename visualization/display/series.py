@@ -7,7 +7,7 @@ from visualization.display.base_display import BaseDisplay
 
 class SeriesDisplay(BaseDisplay):
     @classmethod
-    def content(cls, single_series):
+    def extract_content(cls, single_series):
         detail = f"detail link: {single_series.detail}"
         next_series = f"Next series are: {single_series.next_['name'] if single_series.next_ else ''}"
         previous_series = f"Previous series are: {single_series.previous['name'] if single_series.previous else ''}"
@@ -27,5 +27,5 @@ class SeriesDisplay(BaseDisplay):
 
     @classmethod
     def send(cls, update: Update, context: CallbackContext):
-        cls.send_feature(update, context, cls.content)
+        cls.send_entity(update, context)
         return SeriesHandler.menu(update, context)

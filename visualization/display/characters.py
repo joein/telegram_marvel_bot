@@ -7,7 +7,7 @@ from visualization.display.base_display import BaseDisplay
 
 class CharactersDisplay(BaseDisplay):
     @classmethod
-    def content(cls, character):
+    def extract_content(cls, character):
         ch_name = character.name
         description = character.description
         wiki = f"wiki link: {character.wiki}"
@@ -17,5 +17,5 @@ class CharactersDisplay(BaseDisplay):
 
     @classmethod
     def send(cls, update: Update, context: CallbackContext):
-        cls.send_feature(update, context, cls.content)
+        cls.send_entity(update, context)
         return CharactersHandler.menu(update, context)

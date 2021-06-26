@@ -62,14 +62,14 @@ class Fetcher:
             **kwargs,
         )
 
-    def list_features(self, route, **kwargs):
+    def list_entities(self, route, **kwargs):
         parser = self.LIST_PARSERS[route]
 
         response = self.make_request(route, **kwargs)
         if response.status_code == 200:
             r_json = response.json()
-            parsed = parser.parse(r_json)
+            parsed_entities = parser.parse(r_json)
         else:
             raise FetcherException(response.status_code, response.text)
 
-        return parsed
+        return parsed_entities

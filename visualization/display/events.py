@@ -7,7 +7,7 @@ from visualization.display.base_display import BaseDisplay
 
 class EventsDisplay(BaseDisplay):
     @classmethod
-    def content(cls, event):
+    def extract_content(cls, event):
         ev_name = event.name
         description = event.description
         wiki = f"Wiki link: {event.wiki}"
@@ -23,5 +23,5 @@ class EventsDisplay(BaseDisplay):
 
     @classmethod
     def send(cls, update: Update, context: CallbackContext):
-        cls.send_feature(update, context, cls.content)
+        cls.send_entity(update, context)
         return EventsHandler.menu(update, context)

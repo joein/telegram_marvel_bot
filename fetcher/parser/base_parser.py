@@ -17,7 +17,7 @@ class BaseParser(abc.ABC):
             cls.add_custom_features(builder, custom_features)
             entities.append(builder.finish())
 
-        return Parsed(entities, count, total)
+        return ParsedEntities(entities, count, total)
 
     @staticmethod
     def extract_data(response_json):
@@ -70,8 +70,8 @@ class BaseParser(abc.ABC):
         pass
 
 
-class Parsed:
-    def __init__(self, features=None, count=0, total=0):
-        self.features = features if features else []
+class ParsedEntities:
+    def __init__(self, entities=None, count=0, total=0):
+        self.entities = entities if entities else []
         self.count = count
         self.total = total

@@ -11,27 +11,27 @@ class BaseDisplay(abc.ABC):
     CAPTION_MAX_LENGTH = 1024
 
     @classmethod
-    def extract_feature(cls, update, context):
-        feature = None
-        for feature_ in context.chat_data[FEATURES]:
-            length_limited_name = feature_.name[
+    def extract_entity(cls, update, context):
+        entity = None
+        for entity_ in context.chat_data[FEATURES]:
+            length_limited_name = entity_.name[
                 : cls.CALLBACK_DATA_MAX_LENGTH
             ]
             if length_limited_name == update.callback_query.data:
-                feature = feature_
+                entity = entity_
                 break
-        return feature
+        return entity
 
     @classmethod
-    def send_feature(cls, update, context, content_extractor):
+    def send_entity(cls, update, context):
         context.chat_data[OFFSET] = 0
 
-        feature = cls.extract_feature(update, context)
-        if feature:
-            caption = content_extractor(feature)
+        entity = cls.extract_entity(update, context)
+        if entity:
+            caption = cls.extract_content(entity)
             context.bot.send_photo(
                 update.callback_query.message.chat_id,
-                feature.img_link,
+                entity.img_link,
                 caption=caption,
             )
 
@@ -40,7 +40,7 @@ class BaseDisplay(abc.ABC):
 
     @classmethod
     @abc.abstractmethod
-    def content(cls, feature):
+    def extract_content(cls, entity):
         pass
 
     @classmethod
