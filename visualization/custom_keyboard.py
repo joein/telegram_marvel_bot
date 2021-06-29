@@ -37,12 +37,12 @@ class _CustomKeyboard:
 
     @staticmethod
     def _inner_menu(
-        features, list_state, find_by_name_state, find_by_name_beginning_state
+        entities, list_state, find_by_name_state, find_by_name_beginning_state
     ):
         buttons = [
             [
                 InlineKeyboardButton(
-                    text=f"List {features}", callback_data=list_state,
+                    text=f"List {entities}", callback_data=list_state,
                 ),
             ],
             [

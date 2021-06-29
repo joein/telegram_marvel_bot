@@ -17,10 +17,10 @@ class _Text:
         )
 
     @staticmethod
-    def _inner_menu(features, criterion):
+    def _inner_menu(entities, criterion):
         text = (
-            f"You may request list of {features} (in alphabetical order),"
-            f" try to find {features} by exact {criterion}"
+            f"You may request list of {entities} (in alphabetical order),"
+            f" try to find {entities} by exact {criterion}"
             f" or by its beginning"
         )
         return text
